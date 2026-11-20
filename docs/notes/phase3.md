@@ -68,4 +68,28 @@ Yêu cầu gốc: [docs/requirements/phase3-Ticket-03.md](../requirements/phase3
 - Bản 3D: thanh dầu, nhấp nháy, đèn tắt xẹp và rách, chế độ mù màu, HUD sức chứa và ngưỡng đèn; kiểm tra bằng `browser-check`.
 
 ## 5. Đánh giá Phase 3
-(điền sau khi chạy bằng chứng, xem mục cuối file)
+- **Đạt (có bằng chứng):** mọi mục F1–F4, D1–D5, W1–W4, K1, P1, V1–V2, A1–A2, Contract v1.2 và 4 mục DoD. Chi tiết trong [bảng truy vết](../proof/phase3.md).
+- **Kiểm chứng yếu hơn:** âm thanh mới (châm dầu, đèn tắt) chỉ có review code. "Nhấp nháy 1 Hz" được đo bằng hệ số sáng đổi theo nhịp 0.5 s trong trình duyệt, không đo bằng ảnh liên tiếp. FPS 60.8 trên GPU của máy làm bài, chưa đo trên máy chấm.
+- **Hồi quy Phase 1–2:** chạy lại 28 scenario Phase 2 trên luật mới thì 22 đạt. 6 scenario đỏ đều do luật [THAY THẾ] (thời lượng, điểm, thắng sớm), nên được chuyển sang `scenarios/obsolete-v1.1/` kèm bảng lý do và scenario thay thế. Unit/contract test bị thay được sửa và có chú thích lý do. Không có test nào bị skip.
+- **Rủi ro cho test ẩn:**
+  - C8: `wander` đi về đèn tắt gần nhất và đứng chờ. Đây là cách hiểu chữ "như trước", và làm hành vi `wander` khác Phase 2.
+  - C3: thời điểm phát `fuel_drain`.
+  - C5: `deposited` của đèn sáng giữ 10/5.
+  - C12: +15 thay cho +5.
+  - C15: thêm `target_lantern_id` vào snapshot.
+
+  Nên hỏi trợ giảng Phase 3 các điểm này.
+- **Lỗi tìm được nhờ kiểm chứng** (chi tiết ở [ai_log](ai_log.md) #21–#30):
+  - Kỳ vọng sai định dạng mảng.
+  - Phép tính tay quên rằng dầu bị hao trước khi châm.
+  - Biên bán kính nhặt mất test bảo vệ khi lưu trữ `p2_r01`; mutation check phát hiện.
+  - Prompt bị ẩn sai.
+  - Replay bỏ qua bàn phím.
+  - Mutation check sửa trực tiếp file thật nên đụng hook Stop.
+  - Reviewer chỉ ra 2 nhánh `drain` chưa được ghim bằng test.
+- **Harness đã chỉnh:**
+  - `mutation-check` chạy trên bản sao tạm, có 40 lỗi gài.
+  - Thêm bẫy dầu và bẫy mảng `expect` vào AGENTS.md.
+  - Skill `new-scenario` có trường v1.2 và cách tính dầu.
+  - `contract-reviewer` đối chiếu v1.2.
+  - Bản 3D có `&live` để dựng scenario rồi điều khiển bằng phím thật.

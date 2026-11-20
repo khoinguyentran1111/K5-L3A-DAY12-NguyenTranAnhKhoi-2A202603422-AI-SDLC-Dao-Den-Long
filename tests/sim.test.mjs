@@ -180,6 +180,19 @@ test('a wandering shade targets the nearest lantern with fuel < 30 (exactly 30 i
   assert.equal(wanderTarget(g, s).id, 'L5', 'no weak lantern: nearest unlit');
 });
 
+test('drain -> wander when more than 2 m from its lantern; drain -> chase exactly at 6 m (Ticket-03 §2)', () => {
+  // (gaps found by the contract-reviewer before tagging phase-3)
+  const far = game({ lanterns: [{ id: 'L1', lit: true, fuel: 20 }], shades: [{ id: 'S1', pos: [0, 1, 22.5], state: 'drain', target_lantern_id: 'L1' }] });
+  run(far, 1);
+  assert.equal(far.shades[0].state, 'wander', '2.5 m > 2 m');
+  const at6 = game({ player: { pos: [0, 0, 17] }, lanterns: [{ id: 'L1', lit: true, fuel: 20 }], shades: [{ id: 'S1', pos: [0, 1, 23], state: 'drain', target_lantern_id: 'L1' }] });
+  run(at6, 1);
+  assert.equal(at6.shades[0].state, 'chase', 'Mây exactly 6 m away');
+  const beyond = game({ player: { pos: [0, 0, 16.99] }, lanterns: [{ id: 'L1', lit: true, fuel: 20 }], shades: [{ id: 'S1', pos: [0, 1, 23], state: 'drain', target_lantern_id: 'L1' }] });
+  run(beyond, 1);
+  assert.equal(beyond.shades[0].state, 'drain', '6.01 m: keeps draining');
+});
+
 test('scenario: target_lantern_id must exist on the night; drain without a target takes the nearest lantern', () => {
   assert.throws(() => game({ shades: [{ pos: [0, 1, 0], target_lantern_id: 'L6' }] }), ScenarioError);
   const g = game({ lanterns: [{ id: 'L2', lit: true, fuel: 10 }], shades: [{ pos: [22, 1, 7.7], state: 'drain' }] });

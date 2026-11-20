@@ -10,7 +10,7 @@
 - **Điểm:** +10 → **+5** mỗi đom đóm nạp (cả châm dầu); thắp lại +40; Tỏa Sáng trúng Bóng Mực đang hút dầu +15; **bỏ thưởng thời gian** (`per_second_left` bị xóa khỏi `tuning.score`); thưởng bình minh mới: mỗi đèn sáng 50 + floor(fuel), mỗi Ngọn Lửa 50. Khối `tuning.score` đổi khóa: thêm `per_relight`, `per_stun_drain`, `per_lit_lantern_dawn`.
 - **Đèn đã sáng có thể tắt:** dầu 0–100, hao 1/giây, hết dầu thì `lit: false`, `deposited: 0`. Tương tác ở đèn sáng chưa đầy là **châm dầu** (trước đây đèn sáng bị bỏ qua khi chọn).
 - **Vùng an toàn có điều kiện:** đèn có fuel < 30 không còn vùng an toàn.
-- **Bóng Mực có trạng thái mới `drain`** (danh sách trạng thái: `spawning, wander, chase, recoil, stunned, drain`). Bóng Mực `wander` giờ đi về đèn yếu hoặc đèn tắt gần nhất thay vì lang thang ngẫu nhiên (giả định C8), nên chuỗi RNG và vị trí Bóng Mực khác Phase 2 với cùng seed.
+- **Bóng Mực có trạng thái mới `drain`** (danh sách trạng thái: `spawning, wander, chase, recoil, stunned, drain`). Bóng Mực `wander` giờ đi về đèn yếu hoặc đèn tắt gần nhất **và đứng chờ khi cách ≤ 2 m đèn tắt** thay vì lang thang ngẫu nhiên (giả định C8; chỉ lang thang ngẫu nhiên khi mọi đèn đều sáng và ≥ 30), nên chuỗi RNG và vị trí Bóng Mực khác Phase 2 với cùng seed.
 - **Hết choáng thì về `wander`** (trước đây chọn `chase`/`wander` theo khoảng cách; kết quả trong cùng tick vẫn như cũ vì `wander` ≤ 12 m chuyển `chase` ngay).
 - **Sức chứa** không còn cố định 10: 10 + 2 × số lần thắp thành công, tối đa 20.
 
@@ -24,7 +24,7 @@
 
 ### Test
 - 6 scenario Phase 2 bị luật mới thay được chuyển sang `scenarios/obsolete-v1.1/` kèm bảng lý do (không xóa, không skip); 22 scenario `p2_*` còn lại vẫn chạy và đạt; 22 scenario `p3_*` mới.
-- Unit/contract test bị thay được sửa kèm lý do ghi trong đầu file test; mutation check 20 → 38 lỗi gài.
+- Unit/contract test bị thay được sửa kèm lý do ghi trong đầu file test; mutation check 20 → 40 lỗi gài (chạy trên bản sao tạm của project).
 
 ## [Phase 2] — tag `phase-2` · Ticket-02 "Ba hòn đảo" · Contract v1.1
 

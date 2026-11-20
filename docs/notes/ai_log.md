@@ -51,6 +51,29 @@ Công cụ: **Claude Code** (extension VS Code, model Claude Opus 5.5) và một
 | 19 | Bài kiểm tra trình duyệt phụ thuộc FPS: dịch chuyển Mây khi lướt chưa xong; xoay camera theo thời gian giữ phím; cấu hình "đèn sau camera" sai hình học | Chạy ở 2 chế độ (phần mềm 6 FPS, GPU 60 FPS) cho kết quả khác nhau; thêm trạng thái vào thông báo lỗi để chẩn đoán | Chờ theo điều kiện; thêm `__ddl.setCamYaw`; chọn cấu hình có biên rõ ràng |
 | 20 | Camera bị tháp chuông che khi Mây ở phía bắc tháp | Ảnh chụp bằng chứng `p2_m3_pad_to_tier2.png` toàn màu nâu | Camera tự kéo lại gần khi tháp chắn tầm nhìn |
 
+## Phase 3 (Ticket-03 "Đèn cạn dầu")
+
+### Cách làm việc với agent
+1. Lưu nguyên văn Ticket-03 và Ticket-04 vào `docs/requirements/` ngay khi nhận (một lần cho cả hai phase cuối).
+2. Chạy bộ scenario Phase 2 trên luật mới **trước** khi viết test mới để biết chính xác test nào bị thay: 6/28 đỏ, cả 6 đều do luật [THAY THẾ]; chuyển sang `obsolete-v1.1/` kèm bảng lý do.
+3. Viết luật theo đúng "bước 2 / ngay sau bước 2 / xét thắng sau cùng" của ticket; dầu là số nguyên 1/60 nên mọi biên (≤ 0, < 30, = 100) tính tay được chính xác.
+4. Mỗi luật mới có scenario tính tay (22 `p3_*`) và một lỗi gài trong mutation check (thêm 18).
+5. Ghi quyết định thiết kế (ADR 0001) và breaking changes (CHANGELOG) trước khi gắn tag.
+
+### Những lần AI sai và cách phát hiện (Phase 3)
+| # | AI sai ở đâu | Phát hiện bằng | Sửa / chỉnh harness |
+|---|---|---|---|
+| 21 | 6 scenario mới viết `lanterns` chỉ 1–2 phần tử, trong khi trình so khớp đòi mảng đủ độ dài (giá trị thật đều khớp số tính tay) | `scripts/scenarios.mjs` báo "expected array of length 1" | Bộ sinh scenario tự thêm `{}` cho đủ 5/6/7 đèn (scenario chưa commit nên sinh lại); ghi quy tắc vào AGENTS.md và skill `new-scenario` |
+| 22 | Kỳ vọng tự tính của test sự kiện v1.2 sai: quên rằng bước 2 hao dầu trước bước 5 (`ceil(3001/600) = 6`, không phải 5) và lần bấm thứ hai lại chọn đúng đèn cũ | Tự kiểm lại phép tính trước khi chạy | Viết lại test (đổi fuel, cho Mây đi sang đèn khác); ghi bẫy "hao trước khi châm" vào AGENTS.md |
+| 23 | Sau khi lưu trữ `p2_r01`, không còn test nào giữ biên bán kính nhặt 1.0 m (scenario mới bỏ sót sự kiện tick 11) | Mutation check: "pickup radius is strict <" sống sót (37/38) | Thêm unit test biên 1.0 / 1.001 m; ghi "kiểm tra lại mutation khi lưu trữ scenario" vào AGENTS.md |
+| 24 | Edit đầu file `sim.test.mjs` làm mất 2 dòng import (`test`, `assert`) | `npm test`: ReferenceError | Thêm lại import; chạy test ngay sau mỗi lần sửa file test |
+| 25 | Bốn lần vá file bằng heredoc trong bash lại hỏng (`\n` thành xuống dòng thật, mất `\` trong regex, lỗi "unexpected EOF") dù bẫy đã có trong AGENTS.md | Lỗi cú pháp khi chạy, test regex sai | Chuyển hẳn sang Write/Edit cho mọi bản vá có ký tự đặc biệt |
+| 26 | Ẩn nhắc "E — Nạp ánh sáng" khi không mang đom đóm, làm hỏng hành vi cũ | `browser-check` (check của Phase 2) | Bỏ điều kiện; người chơi vẫn cần biết đèn còn thiếu bao nhiêu |
+| 27 | Check "bấm E châm dầu" chạy trong chế độ replay, mà replay bỏ qua bàn phím | `browser-check` FAIL | Thêm `?scenario=X&live` (dựng scenario, điều khiển bằng phím thật) |
+| 29 | Mutation check gài lỗi trực tiếp vào `src/core/sim.js` của thư mục làm việc; hook `Stop` chạy `npm test` đúng lúc đó nên báo đỏ giả (lỗi gài, không phải code thật) | Hook Stop chặn kết thúc 2 lần, mỗi lần đúng các test của lỗi gài đang chạy; `git diff` cho thấy sim.js đang khác HEAD | `mutation-check.mjs` giờ gài lỗi trên một bản sao tạm của project, thư mục làm việc không bao giờ bị sửa |
+| 30 | Hai nhánh của `drain` chưa có test ghim: rời drain khi cách đèn > 2 m, và biên đúng 6 m của drain → chase (scenario né biên); tham chiếu giả định trong code ghi sai (C24, C18) | Agent `contract-reviewer` (không phải agent viết code) trước khi tag | Thêm unit test biên 2 m / 6 m / 6.01 m và 2 lỗi gài (40/40 bị bắt); sửa chú thích; ghi rõ "đứng chờ" của C8 trong CHANGELOG |
+| 28 | `git mv` 6 scenario đã stage từ trước nên lọt vào commit tài liệu thay vì commit lõi | Đọc lại `git show --stat` | Không viết lại lịch sử (đã đúng nội dung); từ nay `git status` trước mỗi commit |
+
 ### Token và chi phí (ước tính)
 | Hạng mục | Ước tính |
 |---|---|
@@ -58,6 +81,7 @@ Công cụ: **Claude Code** (extension VS Code, model Claude Opus 5.5) và một
 | Phiên chính Phase 1 | khoảng 70 lượt gọi công cụ; ngữ cảnh lớn nhất khoảng 150 nghìn token; output khoảng 60–80 nghìn token. Phần lớn input là cache read |
 | Tổng Phase 1 | **ước tính vài triệu token input (chủ yếu cache) + dưới 100 nghìn token output.** Cần cập nhật số thật từ `/cost` hoặc trang usage của tài khoản |
 | Phase 2 | khoảng 120 lượt gọi công cụ, output khoảng 150–200 nghìn token (sim viết lại, 28 scenario, client 3 Đêm, tài liệu); input chủ yếu là cache read. Subagent: 1 lần web-fetch đọc trang Actions (khoảng 18 nghìn token). **Cần cập nhật số thật** |
+| Phase 3 | khoảng 90 lượt gọi công cụ, output khoảng 100–130 nghìn token (luật dầu, 22 scenario, test, client, ADR/CHANGELOG); một lần nén ngữ cảnh (`/compact`) trước khi bắt đầu. Subagent: `contract-reviewer` trước khi tag. **Cần cập nhật số thật** |
 
 Cách tiết kiệm ở Phase 2: spec và giả định viết một lần rồi dùng làm "hợp đồng" cho cả code lẫn test; 28 scenario sinh bằng một script (thay vì 70 lần ghi file riêng); chỉ xem các ảnh cần thiết; kiểm tra trạng thái CI qua trang web khi API công khai hết lượt (không chạy vòng lặp hỏi liên tục).
 

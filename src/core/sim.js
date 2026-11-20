@@ -3,7 +3,7 @@
 // every random choice comes from the seeded RNG, so (seed, night, scenario, inputs) -> identical
 // output. One call to step() = one tick, processed in the mandatory phases of Ticket-02, with the
 // Ticket-03 additions (fuel in phase 2, lanterns going out right after phase 2, dawn rule in 11).
-// Assumptions: B1..B25 in docs/notes/phase2.md, C1..C24 in docs/notes/phase3.md,
+// Assumptions: B1..B25 in docs/notes/phase2.md, C1..C19 in docs/notes/phase3.md,
 // design decision in docs/adr/0001-lantern-fuel-and-dawn-win.md.
 import { mulberry32 } from './rng.js';
 import { getNight, blockedByObstacle } from './maps.js';
@@ -196,7 +196,7 @@ export function createGame({ tuning, seed = 1, night = 1, scenario = {} }) {
         }
         sh.target = s.target_lantern_id;
       } else if (sh.state === 'drain') {
-        sh.target = [...g.lanterns].sort((a, b) => distXZ(sh, a) - distXZ(sh, b) || byId(a, b))[0].id; // C18
+        sh.target = [...g.lanterns].sort((a, b) => distXZ(sh, a) - distXZ(sh, b) || byId(a, b))[0].id; // C16
       }
       const left = s.state_ticks_left ?? (sh.state === 'stunned' ? T(tuning.pulse_stun_s) : sh.state === 'recoil' ? WORLD.recoilTicks : sh.state === 'spawning' ? 1 : 0);
       if (sh.state === 'recoil') {
