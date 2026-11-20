@@ -114,6 +114,13 @@ const m = node(['scripts/mutation-check.mjs']);
 write('mutation.txt', header + m.stdout + m.stderr);
 console.log(`  ${m.stdout.trim().split('\n').at(-1)}`);
 
+// 5b. Ticket-04 soak test (bench needs a real window: run node scripts/bench.mjs separately -> bench.json)
+if (Number(phase) >= 4) {
+  console.log('> soak');
+  const so = node(['scripts/soak.mjs', '--seed', '7', '--nights', '10', '--out', path.join(OUT, 'soak.json')]);
+  console.log(`  ${so.stdout.trim()}`);
+}
+
 // 6. screenshots of the 3D client (optional: needs a local Chrome/Edge)
 const BROWSERS = [
   process.env.CHROME,

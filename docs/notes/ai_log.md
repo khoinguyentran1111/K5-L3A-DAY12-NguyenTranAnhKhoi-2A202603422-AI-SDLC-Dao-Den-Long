@@ -74,6 +74,17 @@ Công cụ: **Claude Code** (extension VS Code, model Claude Opus 5.5) và một
 | 30 | Hai nhánh của `drain` chưa có test ghim: rời drain khi cách đèn > 2 m, và biên đúng 6 m của drain → chase (scenario né biên); tham chiếu giả định trong code ghi sai (C24, C18) | Agent `contract-reviewer` (không phải agent viết code) trước khi tag | Thêm unit test biên 2 m / 6 m / 6.01 m và 2 lỗi gài (40/40 bị bắt); sửa chú thích; ghi rõ "đứng chờ" của C8 trong CHANGELOG |
 | 28 | `git mv` 6 scenario đã stage từ trước nên lọt vào commit tài liệu thay vì commit lõi | Đọc lại `git show --stat` | Không viết lại lịch sử (đã đúng nội dung); từ nay `git status` trước mỗi commit |
 
+## Phase 4 (Ticket-04 "Bình minh")
+
+Làm gọn theo yêu cầu của người dùng giữa phase ("không cần quá chi tiết, chỉ cần đáp ứng yêu cầu bài").
+
+| # | AI sai ở đâu | Phát hiện bằng | Sửa |
+|---|---|---|---|
+| 31 | Soak báo RSS 38 → 50 MB (> 1.2×) và AI suýt kết luận là rò rỉ | Ghi RSS sau mỗi Đêm: phẳng ~48 MB qua 30 Đêm, phần tăng chỉ xảy ra trong Đêm đầu (JIT + heap người trẻ) | Cờ V8 cho soak (ghi rõ trong README, `soak.json.v8_flags`), không giấu số không cờ |
+| 32 | `peak_mem_mb = 1`: bộ lọc PowerShell khớp chính nó; sau đó đọc `PeakWorkingSetSize` như byte trong khi đơn vị là KB | Giá trị vô lý trong `bench.json`; in bảng tiến trình để gỡ lỗi | Loại `powershell.exe`; đổi đơn vị |
+| 33 | Check giao diện chạy ở viewport 1262×624 (headless có khung cửa sổ), và scenario "trúng đòn + tỏa sáng" không còn đủ 3 đom đóm sau khi bị đánh rơi | `browser-check` FAIL kèm chi tiết | Ép viewport 1280×720 bằng DevTools; tăng số mang trong scenario |
+| 34 | HUD vẽ 99 biểu tượng lửa với scenario thử nghiệm; màn Cài đặt bị cắt | Xem ảnh chụp | Tối đa 5 biểu tượng + "+N"; thu gọn hàng |
+
 ### Token và chi phí (ước tính)
 | Hạng mục | Ước tính |
 |---|---|
@@ -81,6 +92,7 @@ Công cụ: **Claude Code** (extension VS Code, model Claude Opus 5.5) và một
 | Phiên chính Phase 1 | khoảng 70 lượt gọi công cụ; ngữ cảnh lớn nhất khoảng 150 nghìn token; output khoảng 60–80 nghìn token. Phần lớn input là cache read |
 | Tổng Phase 1 | **ước tính vài triệu token input (chủ yếu cache) + dưới 100 nghìn token output.** Cần cập nhật số thật từ `/cost` hoặc trang usage của tài khoản |
 | Phase 2 | khoảng 120 lượt gọi công cụ, output khoảng 150–200 nghìn token (sim viết lại, 28 scenario, client 3 Đêm, tài liệu); input chủ yếu là cache read. Subagent: 1 lần web-fetch đọc trang Actions (khoảng 18 nghìn token). **Cần cập nhật số thật** |
+| Phase 4 | khoảng 60 lượt gọi công cụ, output khoảng 70–90 nghìn token (bench, soak, bảng xếp hạng, dễ tiếp cận, gói phát hành, tài liệu). **Cần cập nhật số thật** |
 | Phase 3 | khoảng 90 lượt gọi công cụ, output khoảng 100–130 nghìn token (luật dầu, 22 scenario, test, client, ADR/CHANGELOG); một lần nén ngữ cảnh (`/compact`) trước khi bắt đầu. Subagent: `contract-reviewer` trước khi tag. **Cần cập nhật số thật** |
 
 Cách tiết kiệm ở Phase 2: spec và giả định viết một lần rồi dùng làm "hợp đồng" cho cả code lẫn test; 28 scenario sinh bằng một script (thay vì 70 lần ghi file riêng); chỉ xem các ảnh cần thiết; kiểm tra trạng thái CI qua trang web khi API công khai hết lượt (không chạy vòng lặp hỏi liên tục).

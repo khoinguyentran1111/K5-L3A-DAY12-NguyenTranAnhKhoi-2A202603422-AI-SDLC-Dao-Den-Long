@@ -10,7 +10,10 @@
 |---|---|---|---|
 | [three.js](https://threejs.org) | 0.160.0 | MIT | Hiển thị 3D trong trình duyệt |
 
-Phần còn lại (mô phỏng, headless, test, script) chỉ dùng thư viện chuẩn của Node.js.
+Phần còn lại (mô phỏng, headless, test, script) chỉ dùng thư viện chuẩn của Node.js. Benchmark và kiểm tra giao diện điều khiển Google Chrome/Microsoft Edge có sẵn trên máy qua DevTools Protocol (không đóng gói kèm).
+
+## Phông chữ
+- Dùng phông hệ thống (Segoe UI / system-ui), không kèm file phông.
 
 ## Công cụ AI
 - Mã nguồn, test, tài liệu và cấu hình harness được viết cùng **Claude Code (Anthropic, model Claude Opus 5.5)** dưới sự điều phối, review và kiểm chứng của tác giả. Chi tiết: [docs/notes/ai_log.md](docs/notes/ai_log.md).

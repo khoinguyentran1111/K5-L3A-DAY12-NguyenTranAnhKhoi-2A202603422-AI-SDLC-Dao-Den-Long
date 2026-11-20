@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -47,7 +47,8 @@ const check = (name, ok, detail = '') => {
 const port = 5600 + Math.floor(Math.random() * 300);
 const dbg = 9400 + Math.floor(Math.random() * 300);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-browser-'));
-const server = spawn(process.execPath, ['scripts/serve.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(port), NO_OPEN: '1' } });
+const board = path.join(tmp, 'leaderboard.json'); // never touch the player's data/leaderboard.json
+const server = spawn(process.execPath, ['scripts/serve.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(port), NO_OPEN: '1', DDL_LEADERBOARD: board } });
 await new Promise((r) => server.stdout.once('data', r));
 const flags = [
   '--headless=new', '--enable-unsafe-swiftshader', '--hide-scrollbars', '--no-first-run',
@@ -134,6 +135,8 @@ try {
   await send('Runtime.enable');
   await send('Log.enable');
   await send('Page.enable');
+  // page area exactly 1280x720 (headless windows include a frame), like the bench and Ticket-04 §4
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 720, deviceScaleFactor: 1, mobile: false });
   const open = async (q) => {
     await send('Page.navigate', { url: `http://localhost:${port}/${q}` });
     return waitFor('!!(window.__ddl && window.__ddl.game)');
@@ -222,7 +225,7 @@ try {
   check('Enter / Tiếp tục resumes', await waitFor(`!${D}.game.paused && ${D}.screen === null && ${D}.game.simTick > ${st0}`));
 
   // 5. settings persist across reloads   (F5)
-  await press('KeyP');
+  await press('Escape');
   await waitFor(`${D}.screen === 'pause'`);
   await evaluate("document.getElementById('btnPauseSettings').click()");
   await waitFor(`${D}.screen === 'settings'`);
@@ -308,6 +311,130 @@ try {
   await open('?scenario=ui_n3_win&night=3&seed=1');
   check('winning Night 3 shows the Dawn (Bình Minh) screen with the total', await waitFor(`${D}.screen === 'dawn' && document.getElementById('dawnTotal').textContent === String(${D}.campaign.total) && ${D}.campaign.total === ${D}.game.score`, 20000));
   await shot('p2_dawn');
+
+  // 8b. Ticket-04 §3 leaderboard: name entry after a loss, saved on the disk, board from the menu, export
+  await open('?scenario=p2_r04_dawn');
+  await waitFor(`${D}.screen === 'result' && !!document.getElementById('lbName')`, 20000);
+  const typeName = async (name) => {
+    await evaluate("(() => { const i = document.getElementById('lbName'); i.value = ''; i.focus(); })()");
+    await send('Input.insertText', { text: name });
+    await evaluate("document.getElementById('btnSave').click()");
+  };
+  await typeName('ab');
+  check('leaderboard refuses an invalid name with a message', await waitFor(`/⚠/.test(document.getElementById('lbMsg').textContent)`, 3000));
+  await typeName('Mây_test');
+  check('leaderboard saves a valid name (Vietnamese letters accepted)', await waitFor(`/Đã lưu/.test(document.getElementById('lbMsg').textContent)`, 5000));
+  await shot('p4_save_score');
+  await open('');
+  await waitFor(`${D}.screen === 'menu'`);
+  await evaluate("document.getElementById('btnBoard').click()");
+  const boardOk = await waitFor(`${D}.screen === 'board' && /Mây_test/.test(document.getElementById('boardTable').textContent)`, 5000);
+  check('main menu -> Bảng xếp hạng lists the saved entry after a reload (stored on disk)', boardOk);
+  await shot('p4_leaderboard');
+  const exportFile = path.join(tmp, 'export.json');
+  const ex = spawnSync(process.execPath, ['scripts/serve.mjs', '--export-leaderboard', exportFile], { cwd: ROOT, env: { ...process.env, DDL_LEADERBOARD: board }, encoding: 'utf8' });
+  const exported = ex.status === 0 ? JSON.parse(fs.readFileSync(exportFile, 'utf8')) : null;
+  check('--export-leaderboard writes the same entry', exported?.entries?.[0]?.name === 'Mây_test' && exported.entries[0].nights_won === 0, JSON.stringify(exported));
+
+  // 8c. Ticket-04 §4 accessibility
+  // text size: nothing visible under 18 px at 1280x720; "Chữ lớn" scales by 1.25
+  const minFont = () => evaluate(`(() => { let min = 1e9, who = ''; for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('[hidden]') || getComputedStyle(el).display === 'none' || getComputedStyle(el).visibility === 'hidden') continue;
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    const fs = parseFloat(getComputedStyle(el).fontSize); if (fs < min) { min = fs; who = el.tagName + '#' + el.id + '.' + el.className + ' "' + el.textContent.trim().slice(0, 24) + '"'; } }
+    return { min, who, w: innerWidth, h: innerHeight }; })()`);
+  const fonts = {};
+  await evaluate(`${D}.showBoard(() => {})`);
+  fonts.board = await minFont();
+  await open('');
+  await waitFor(`${D}.screen === 'menu'`);
+  fonts.menu = await minFont();
+  await evaluate("document.getElementById('btnSettings').click()");
+  await waitFor(`${D}.screen === 'settings'`);
+  fonts.settings = await minFont();
+  await open('?scenario=ui_p3_fuel&live');
+  await waitFor(`${D}.mode === 'playing'`);
+  await sleep(500);
+  fonts.hud = await minFont();
+  const smallest = Math.min(...Object.values(fonts).map((v) => v.min));
+  check('UI text is at least 18 px at 1280x720 (menu, settings, board, HUD)', smallest >= 18 && fonts.hud.w === 1280, JSON.stringify(fonts));
+  await evaluate(`(() => { const s = ${D}.settings; s.largeText = true; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+  await open('?scenario=ui_p3_fuel&live');
+  await waitFor(`${D}.mode === 'playing'`);
+  await sleep(500);
+  const big = await minFont();
+  const rootPx = await evaluate("parseFloat(getComputedStyle(document.documentElement).fontSize)");
+  check('large text option scales the UI by 1.25 (≥ 22.5 px)', rootPx === 22.5 && big.min >= 22.5, JSON.stringify(big));
+  await shot('p4_large_text');
+  await evaluate(`(() => { const s = ${D}.settings; s.largeText = false; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+
+  // key rebinding: every action, duplicate detection, reserved keys, restore defaults, persistence
+  await open('');
+  await waitFor(`${D}.screen === 'menu'`);
+  await evaluate("document.getElementById('btnSettings').click()");
+  await waitFor(`${D}.screen === 'settings'`);
+  const allActions = await evaluate("['up','down','left','right','jump','dash','interact','pulse','pause'].every((a) => !!document.getElementById('key_' + a))");
+  check('settings list a key for every action (4 directions, jump, dash, interact, pulse, pause)', allActions);
+  const rebind = async (action, code) => {
+    await evaluate(`document.getElementById('key_${action}').click()`);
+    await key(code, 'keyDown');
+    await key(code, 'keyUp');
+    await sleep(150);
+    return evaluate("document.getElementById('keyMsg').textContent");
+  };
+  await rebind('jump', 'KeyJ');
+  const dupMsg = await rebind('dash', 'KeyJ');
+  check('a key already used by another action is refused with a message', /đang dùng cho/.test(dupMsg) && (await evaluate(`${D}.settings.keys.dash`)) === 'ShiftLeft', dupMsg);
+  const resMsg = await rebind('pulse', 'ArrowLeft');
+  check('reserved keys (camera arrows) are refused with a message', /xoay camera/.test(resMsg), resMsg);
+  await shot('p4_rebind');
+  await send('Page.reload', {});
+  await sleep(500);
+  await waitFor('!!window.__ddl', 30000);
+  check('rebound keys are saved between sessions', (await evaluate(`${D}.settings.keys.jump`)) === 'KeyJ');
+  await open('?autostart&night=1&seed=3');
+  await waitFor(`${D}.mode === 'playing'`);
+  await hold('Space', 300);
+  const spaceJump = await evaluate(`${D}.game.player.y > 0.05 || ${D}.game.player.vy > 0`);
+  await key('KeyJ', 'keyDown');
+  const jJump = await waitFor(`${D}.game.player.y > 0.3`, 3000);
+  await key('KeyJ', 'keyUp');
+  check('the new key (J) jumps and the old one (Space) no longer does', jJump && !spaceJump);
+  await press('Escape');
+  await waitFor(`${D}.screen === 'pause'`);
+  await evaluate("document.getElementById('btnPauseSettings').click()");
+  await waitFor(`${D}.screen === 'settings'`);
+  await evaluate("document.getElementById('btnKeysReset').click()");
+  check('"Khôi phục mặc định" restores the default keys', await waitFor(`${D}.settings.keys.jump === 'Space' && document.getElementById('key_jump').textContent === 'Space'`, 3000));
+
+  // captions / visual indicators: new shade (+ edge arrow), low fuel, wind, last 10 s
+  await open('?scenario=ui_p4_alerts&until=320&speed=20');
+  await waitFor(`${D}.mode === 'frozen'`, 30000);
+  const a1 = await evaluate(`({ log: ${D}.fx.log, arrows: document.querySelectorAll('#threats .threat').length, shades: ${D}.game.shades.length })`);
+  check('caption + edge arrow when a shade appears; caption when a lantern drops below 30 fuel', a1.arrows >= 1 && a1.log.some((t) => /Bóng Mực xuất hiện/.test(t)) && a1.log.some((t) => /sắp cạn dầu/.test(t)), JSON.stringify(a1));
+  await shot('p4_captions');
+  await open('?scenario=ui_p4_alerts&until=1900&speed=60');
+  await waitFor(`${D}.mode === 'frozen'`, 60000);
+  const a2 = await evaluate(`${D}.fx.log`);
+  check('captions for "wind is coming" and "last 10 seconds"', a2.some((t) => /Gió sắp nổi/.test(t)) && a2.some((t) => /10 giây cuối/.test(t)), JSON.stringify(a2));
+  await evaluate(`(() => { const s = ${D}.settings; s.captions = false; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+  await open('?scenario=ui_p4_alerts&until=320&speed=20');
+  await waitFor(`${D}.mode === 'frozen'`, 30000);
+  check('captions can be switched off', (await evaluate(`${D}.fx.captions + document.querySelectorAll('#threats .threat').length`)) === 0);
+  await evaluate(`(() => { const s = ${D}.settings; s.captions = true; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+
+  // reduced motion: hit -> camera shake + red flash, pulse -> flash; all off with "Giảm chuyển động"
+  await open('?scenario=ui_p4_hit&until=30&speed=1');
+  await waitFor(`${D}.mode === 'frozen'`, 30000);
+  const m1 = await evaluate(`({ ...${D}.fx, flames: ${D}.game.player.flames })`);
+  check('normal motion: a hit shakes the camera and flashes the screen, the pulse flashes', m1.shakes >= 1 && m1.flashes >= 2 && m1.flames === 2, JSON.stringify(m1));
+  await evaluate(`(() => { const s = ${D}.settings; s.reducedMotion = true; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+  await open('?scenario=ui_p4_hit&until=30&speed=1');
+  await waitFor(`${D}.mode === 'frozen'`, 30000);
+  const m2 = await evaluate(`({ ...${D}.fx, flames: ${D}.game.player.flames })`);
+  check('"Giảm chuyển động": same hit and pulse, no camera shake and no screen flash', m2.shakes === 0 && m2.flashes === 0 && m2.flames === 2, JSON.stringify(m2));
+  await evaluate(`(() => { const s = ${D}.settings; s.reducedMotion = false; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
 
   // 9. FPS during normal play at 1280x720 on this machine's renderer
   await open('?autostart&night=3&seed=5');

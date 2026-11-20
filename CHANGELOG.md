@@ -2,6 +2,19 @@
 
 Định dạng theo [Keep a Changelog](https://keepachangelog.com/). Mỗi phase ứng với một tag (`phase-1` … `phase-4`); Test Contract tăng phiên bản theo ticket.
 
+## [Phase 4] — tag `phase-4` · Release `v1.0.0` · Ticket-04 "Bình minh" · Contract v1.3
+
+### Thêm
+- **Benchmark** `node scripts/bench.mjs --seed 42 --duration 30 --out bench.json`: cửa sổ Chrome/Edge 1280×720, vsync tắt, cảnh chuẩn 200 Bóng Mực + 100 đom đóm, camera bay vòng; đo FPS trung bình, 1% low, p95, load, RSS đỉnh. Kết quả tự đo: [bench.json](bench.json).
+- **Soak test** `node scripts/soak.mjs --seed 7 --nights 10 --out soak.json`: 10 Đêm trong một tiến trình, input ngẫu nhiên theo seed. Kết quả: [soak.json](soak.json).
+- **Bảng xếp hạng cục bộ**: nhập tên sau Bình Minh hoặc khi thua; top 10 lưu trên đĩa (`data/leaderboard.json`); màn Bảng xếp hạng ở menu; `node scripts/serve.mjs --export-leaderboard out.json`.
+- **Dễ tiếp cận**: đổi mọi phím (báo trùng, khôi phục mặc định); phụ đề và chỉ báo (Bóng Mực xuất hiện kèm mũi tên ở mép màn hình, gió, 10 giây cuối, đèn dưới 30 dầu); giảm chuyển động (tắt rung camera và chớp màn hình, hai hiệu ứng mới của phase này); chữ ≥ 18 px, tùy chọn chữ lớn ×1.25.
+- **Đóng gói**: `npm run package` tạo gói chạy được không cần `npm install` (kèm bản web tĩnh) cho Release v1.0.0; README có yêu cầu hệ thống, bench, soak.
+
+### Thay đổi
+- `game.contract.json`: `contract_version` 1.3, thêm `bench_cmd`, `soak_cmd`; `run_cmd` = `node scripts/serve.mjs` (để `<run_cmd> --export-leaderboard out.json` chạy được: `npm start --x` sẽ bị npm hiểu là cờ của npm).
+- Phím tạm dừng chỉ còn `Esc` (bỏ `P`), đi chỉ còn `WASD` (bỏ `↑/↓`), vì mỗi hành động giờ có đúng một phím có thể đổi.
+
 ## [Phase 3] — tag `phase-3` · Ticket-03 "Đèn cạn dầu" · Contract v1.2
 
 ### ⚠ Thay đổi phá vỡ tương thích (breaking changes)

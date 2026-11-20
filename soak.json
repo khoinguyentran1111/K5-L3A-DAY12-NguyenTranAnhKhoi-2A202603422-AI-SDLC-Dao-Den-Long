@@ -1,0 +1,151 @@
+{
+  "nights": 10,
+  "crashes": 0,
+  "results": [
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost",
+    "lost"
+  ],
+  "mem_start_mb": 39.7,
+  "mem_end_mb": 43.1,
+  "duration_s": 0.39,
+  "seed": 7,
+  "gc_exposed": true,
+  "v8_flags": [
+    "--expose-gc",
+    "--max-semi-space-size=1",
+    "--no-opt"
+  ],
+  "mem_peak_mb": 45.6,
+  "pass": true,
+  "node": "v24.20.0",
+  "per_night": [
+    {
+      "night_index": 0,
+      "night": 1,
+      "seed": 7,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 1760,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.4
+    },
+    {
+      "night_index": 1,
+      "night": 2,
+      "seed": 8,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 2561,
+      "score": 5,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.6
+    },
+    {
+      "night_index": 2,
+      "night": 3,
+      "seed": 9,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 1693,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.8
+    },
+    {
+      "night_index": 3,
+      "night": 1,
+      "seed": 10,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 1159,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.8
+    },
+    {
+      "night_index": 4,
+      "night": 2,
+      "seed": 11,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 1962,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.9
+    },
+    {
+      "night_index": 5,
+      "night": 3,
+      "seed": 12,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 3526,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.8
+    },
+    {
+      "night_index": 6,
+      "night": 1,
+      "seed": 13,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 3367,
+      "score": 5,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.9
+    },
+    {
+      "night_index": 7,
+      "night": 2,
+      "seed": 14,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 4982,
+      "score": 15,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 42.7
+    },
+    {
+      "night_index": 8,
+      "night": 3,
+      "seed": 15,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 2131,
+      "score": 10,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 43
+    },
+    {
+      "night_index": 9,
+      "night": 1,
+      "seed": 16,
+      "result": "lost",
+      "reason": "no_flames",
+      "ticks": 1779,
+      "score": 0,
+      "lit_at_end": 0,
+      "anomalies": [],
+      "rss_after_reset_mb": 43.1
+    }
+  ]
+}

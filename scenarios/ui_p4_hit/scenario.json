@@ -1,0 +1,26 @@
+{
+  "random_motes": false,
+  "random_shades": false,
+  "random_drifters": false,
+  "wind_enabled": false,
+  "player": {
+    "pos": [
+      0,
+      0,
+      0
+    ],
+    "carried": 6,
+    "flames": 3
+  },
+  "shades": [
+    {
+      "id": "S1",
+      "pos": [
+        0.5,
+        1,
+        0
+      ],
+      "state": "chase"
+    }
+  ]
+}

@@ -1,16 +1,21 @@
 {
   "name": "dao-den-long",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Đảo Đèn Lồng — game 3D (Three.js) với chế độ headless theo Test Contract v1.0",
+  "description": "Đảo Đèn Lồng — game 3D (Three.js) với chế độ headless theo Test Contract v1.3",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node scripts/serve.mjs",
     "test": "node --test",
     "headless": "node src/headless.js",
-    "proof": "node scripts/proof.mjs"
+    "proof": "node scripts/proof.mjs",
+    "bench": "node scripts/bench.mjs --seed 42 --duration 30 --out bench.json",
+    "soak": "node scripts/soak.mjs --seed 7 --nights 10 --out soak.json",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "three": "0.160.0"

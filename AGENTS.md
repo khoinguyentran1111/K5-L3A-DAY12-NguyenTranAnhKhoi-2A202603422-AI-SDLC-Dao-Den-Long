@@ -1,6 +1,6 @@
 # AGENTS.md — Đảo Đèn Lồng
 
-Game 3D (Three.js, chạy trên trình duyệt) gồm 3 Đêm, cùng chế độ headless theo **Test Contract v1.2** (Ticket-02 + Ticket-03 "Đèn cạn dầu"). Node >= 20, ES modules, không có bước build.
+Game 3D (Three.js, chạy trên trình duyệt) gồm 3 Đêm, cùng chế độ headless theo **Test Contract v1.3** (Ticket-02, Ticket-03 "Đèn cạn dầu", Ticket-04 bench/soak/bảng xếp hạng/dễ tiếp cận). Node >= 20, ES modules, không có bước build.
 
 ## Lệnh
 - Cài: `npm install` · Chạy game: `npm start` (http://localhost:5173; thêm `?autostart&night=N` để vào thẳng Đêm N)
@@ -8,6 +8,8 @@ Game 3D (Three.js, chạy trên trình duyệt) gồm 3 Đêm, cùng chế độ
 - Headless: `node src/headless.js --seed 1 --night 1|2|3 --ticks 600 --out out/run.jsonl [--scenario f.json] [--inputs f.json]`
 - So scenario với expect: `node scripts/scenarios.mjs` · Test có bắt được lỗi không: `node scripts/mutation-check.mjs`
 - Kiểm tra bản 3D: `node scripts/browser-check.mjs` (`BROWSER_GPU=1 REQUIRE_FPS=30` để đo FPS bằng GPU thật)
+- Bench / soak (Ticket-04): `node scripts/bench.mjs --seed 42 --duration 30 --out bench.json` (cần Chrome/Edge) · `node scripts/soak.mjs --seed 7 --nights 10 --out soak.json` · gói phát hành: `npm run package`
+- Bảng xếp hạng: `src/core/leaderboard.js` (luật) + `scripts/serve.mjs` (API, file `data/leaderboard.json`, `--export-leaderboard`)
 - Bằng chứng phase N: `npm run proof -- --phase N [--gpu]` (ghi vào `docs/proof/phaseN/`)
 
 ## Kiến trúc

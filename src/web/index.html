@@ -25,14 +25,17 @@
       <div id="moteBar" class="mote-bar" aria-label="Đom đóm đang mang"></div>
     </div>
     <div class="hud-br">
-      <div class="cd" id="cdDash"><div class="cd-fill"></div><span>Lướt</span><kbd>Shift</kbd></div>
-      <div class="cd" id="cdPulse"><div class="cd-fill"></div><span>Tỏa Sáng</span><kbd>F</kbd></div>
+      <div class="cd" id="cdDash"><div class="cd-fill"></div><span>Lướt</span><kbd id="kDash">Shift</kbd></div>
+      <div class="cd" id="cdPulse"><div class="cd-fill"></div><span>Tỏa Sáng</span><kbd id="kPulse">F</kbd></div>
       <div class="charm-ind" id="charmInd" hidden>Bùa Gió <b id="charmS">10</b>s</div>
     </div>
     <div id="arrow" class="arrow" hidden>➤</div>
     <div id="windWarn" class="wind-warn" hidden>🍃 Gió sắp nổi!</div>
     <div id="leaves" class="leaves"></div>
+    <div id="threats"></div>
+    <div id="captions" class="captions" aria-live="polite"></div>
   </div>
+  <div id="flash" class="flash"></div>
 
   <div id="screen" class="screen">
     <div class="card" id="card"></div>
