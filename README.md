@@ -1,6 +1,6 @@
 # Đảo Đèn Lồng
 
-> **Bản phát hành:** [Release v1.0.0](https://github.com/khoinguyentran1111/K5-L3A-DAY12-NguyenTranAnhKhoi-2A202603422-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0) (gói chạy được + video demo) · **Video demo:** `docs/demo/demo.mp4` / đính kèm Release.
+> **Video demo (4:14):** [demo.mp4](https://github.com/khoinguyentran1111/K5-L3A-DAY12-NguyenTranAnhKhoi-2A202603422-AI-SDLC-Dao-Den-Long/releases/download/v1.0.0/demo.mp4) · **Bản phát hành:** [Release v1.0.0](https://github.com/khoinguyentran1111/K5-L3A-DAY12-NguyenTranAnhKhoi-2A202603422-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0) (gói chạy được + video demo).
 > Day 12 · AI SDLC Lab, bài cá nhân. Đề bài gốc của lab: [docs/lab/](docs/lab/LAB_README.md)
 
 Game 3D góc nhìn thứ ba chạy trên trình duyệt (Three.js). Bạn điều khiển **Mây**, người giữ đèn nhỏ tuổi đội nón lá, quàng khăn đỏ, treo đèn lồng. Mây gom **đom đóm** để thắp các **Đèn Lồng Lớn** trên **ba hòn đảo** (Đảo Bến, Đảo Cau, Đảo Chuông) và **giữ cho đảo còn sáng tới bình minh**: đèn cạn dầu sẽ tắt, **Bóng Mực** rình hút dầu, **Gió Lạc** cướp đom đóm.
