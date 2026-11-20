@@ -21,6 +21,10 @@ const BROWSERS = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
 ].filter(Boolean);
 const browserPath = BROWSERS.find((b) => fs.existsSync(b));
+if (typeof WebSocket === 'undefined') {
+  console.log(`SKIP: needs Node >= 22 (global WebSocket); this is Node ${process.version}`);
+  process.exit(3);
+}
 if (!browserPath) {
   console.log('SKIP: no Chrome/Edge found (set CHROME=/path/to/chrome)');
   process.exit(3);

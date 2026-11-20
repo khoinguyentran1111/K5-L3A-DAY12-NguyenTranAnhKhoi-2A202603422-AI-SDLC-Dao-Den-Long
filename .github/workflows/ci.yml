@@ -9,12 +9,17 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        node: [22]
+        include:
+          - os: ubuntu-latest   # game + headless must still work on the minimum supported Node
+            node: 20
     runs-on: ${{ matrix.os }}
+    name: verify (${{ matrix.os }}, node ${{ matrix.node }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - name: Unit + contract + scenario tests
@@ -38,5 +43,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: headless-out-${{ matrix.os }}
+          name: headless-out-${{ matrix.os }}-node${{ matrix.node }}
           path: out/
