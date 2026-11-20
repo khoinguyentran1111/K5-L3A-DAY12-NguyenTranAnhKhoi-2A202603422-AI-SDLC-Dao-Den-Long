@@ -1,0 +1,24 @@
+{
+  "requirement": "Ticket-03 §3 Đêm 2 cần ceil(0.6 × 6) = 4 đèn: chỉ 3 đèn sáng lúc bình minh thì thua dawn, không thưởng",
+  "why": "3 < 4 nên thua lý do dawn ở tick 3; thua thì không cộng thưởng bình minh: điểm 0.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 10
+  },
+  "events": [
+    {
+      "tick": 3,
+      "name": "game_over",
+      "data": {
+        "result": "lost",
+        "reason": "dawn"
+      }
+    }
+  ],
+  "end": {
+    "ticks": 3,
+    "state": "lost",
+    "score": 0
+  }
+}

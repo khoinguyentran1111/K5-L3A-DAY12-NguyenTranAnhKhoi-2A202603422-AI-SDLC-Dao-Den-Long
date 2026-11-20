@@ -1,0 +1,120 @@
+{
+  "requirement": "M2 Đêm 2: 270 s, 6 đèn đúng tọa độ, Bùa C1 ở (35,0,0), xuất phát (0,0,0) (Ticket-03 §3)",
+  "why": "Tọa độ chép từ Ticket-02 Phần 2; thời lượng Đêm 2 = 270 s theo Ticket-03 §3. Mọi đèn chưa sáng: fuel 0, ever_lit false.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 0
+  },
+  "snapshots": {
+    "0": {
+      "night": 2,
+      "time_left_s": 270,
+      "motes_active": 20,
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "flames": 3,
+        "capacity": 10
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "pos": [
+            0,
+            0,
+            20
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L2",
+          "pos": [
+            17,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L3",
+          "pos": [
+            -17,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L4",
+          "pos": [
+            70,
+            0,
+            20
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L5",
+          "pos": [
+            87,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L6",
+          "pos": [
+            53,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        }
+      ],
+      "charms": [
+        {
+          "id": "C1",
+          "pos": [
+            35,
+            0,
+            0
+          ],
+          "available": true,
+          "respawn_s": 0
+        }
+      ],
+      "drifters": [],
+      "shades": []
+    }
+  },
+  "invariants": [
+    "random_motes_on_points_distinct"
+  ],
+  "end": {
+    "ticks": 0,
+    "state": "playing"
+  }
+}

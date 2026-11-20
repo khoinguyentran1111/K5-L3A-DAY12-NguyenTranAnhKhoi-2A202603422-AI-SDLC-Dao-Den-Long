@@ -1,0 +1,55 @@
+{
+  "requirement": "Thay p2_f05 (Ticket-03 §3 Đêm 1 = 240 s): tạm dừng giữ nguyên sim_tick và thời gian",
+  "why": "Như p2_f05 (90 bước mô phỏng ở tick 1…30 và 61…120) nhưng Đêm 1 dài 240 s: time_left = 240 − 0.5 ở tick 40, 240 − 1.5 ở tick 120.",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 31,
+      "name": "paused",
+      "data": {}
+    },
+    {
+      "tick": 61,
+      "name": "resumed",
+      "data": {}
+    }
+  ],
+  "snapshots": {
+    "40": {
+      "state": "paused",
+      "tick": 40,
+      "sim_tick": 30,
+      "time_left_s": 239.5,
+      "player": {
+        "pos": [
+          0,
+          0,
+          3
+        ]
+      }
+    },
+    "60": {
+      "state": "paused",
+      "sim_tick": 30
+    },
+    "120": {
+      "state": "playing",
+      "sim_tick": 90,
+      "time_left_s": 238.5,
+      "player": {
+        "pos": [
+          0,
+          0,
+          9
+        ]
+      }
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing"
+  }
+}

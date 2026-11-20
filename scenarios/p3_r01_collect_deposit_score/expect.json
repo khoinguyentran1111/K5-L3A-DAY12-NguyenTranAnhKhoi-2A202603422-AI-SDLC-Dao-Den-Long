@@ -1,0 +1,89 @@
+{
+  "requirement": "Thay p2_r01 (Ticket-03 §5 +5 mỗi đom đóm nạp; §4 sức chứa; §1 thắp thì fuel = 100)",
+  "why": "Cùng input với p2_r01: nhặt 10 ở tick 11…191, nạp 10 ở tick 241 thì thắp L1 lần đầu. Điểm = 10×5 + 100 = 150. Sức chứa 10 → 12 (1 lần thắp). Fuel = 100 ở tick 241, hao 1/60 mỗi tick ở tick 242…300 (59 tick) = 6000 − 59 = 5941 đơn vị = 99.016 → 99.0.",
+  "args": {
+    "seed": 1,
+    "ticks": 300
+  },
+  "events": [
+    {
+      "tick": 191,
+      "name": "mote_picked",
+      "data": {
+        "carried": 10
+      }
+    },
+    {
+      "tick": 241,
+      "name": "deposit",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 10,
+        "deposited": 10
+      }
+    },
+    {
+      "tick": 241,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1",
+        "relight": false
+      }
+    }
+  ],
+  "event_counts": {
+    "mote_picked": 10,
+    "deposit": 1,
+    "lantern_lit": 1
+  },
+  "snapshots": {
+    "200": {
+      "score": 0,
+      "player": {
+        "carried": 10,
+        "capacity": 10
+      }
+    },
+    "300": {
+      "score": 150,
+      "player": {
+        "pos": [
+          0,
+          0,
+          23.5
+        ],
+        "carried": 0,
+        "capacity": 12
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "deposited": 10,
+          "fuel": 99,
+          "ever_lit": true,
+          "relit_count": 0
+        },
+        {
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false
+        },
+        {
+          "lit": false
+        },
+        {
+          "lit": false
+        },
+        {
+          "lit": false
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 300,
+    "state": "playing",
+    "score": 150
+  }
+}

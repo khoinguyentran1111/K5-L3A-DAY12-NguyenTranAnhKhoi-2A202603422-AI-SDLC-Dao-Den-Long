@@ -1,0 +1,52 @@
+{
+  "requirement": "Ticket-03 §3 không còn thắng sớm: thắp đủ mọi đèn không kết thúc Đêm (all_lit không còn dùng); đèn đặt sẵn bằng scenario không tính vào successful_lights",
+  "why": "Tick 1: nạp 3 (7 + 3 = 10) thắp L5 lần đầu: điểm 3×5 + 100 = 115, cả 5 đèn sáng nhưng game vẫn playing. successful_lights chỉ đếm L5 (4 đèn đặt sẵn không tính) nên sức chứa 12.",
+  "args": {
+    "seed": 1,
+    "ticks": 100
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L5",
+        "relight": false
+      }
+    }
+  ],
+  "event_counts": {
+    "game_over": 0
+  },
+  "snapshots": {
+    "100": {
+      "state": "playing",
+      "score": 115,
+      "player": {
+        "capacity": 12
+      },
+      "lanterns": [
+        {
+          "lit": true
+        },
+        {
+          "lit": true
+        },
+        {
+          "lit": true
+        },
+        {
+          "lit": true
+        },
+        {
+          "lit": true
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 100,
+    "state": "playing",
+    "score": 115
+  }
+}

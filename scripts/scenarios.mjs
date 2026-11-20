@@ -58,7 +58,9 @@ const snaps = (lines) => lines.filter((l) => l.type === 'snapshot');
 const INVARIANTS = {
   shades_outside_safe_radius_of_lit_lanterns(lines, failures) {
     for (const s of snaps(lines)) {
-      for (const L of s.lanterns.filter((x) => x.lit)) {
+      // Ticket-03: only lanterns with fuel ≥ 30 keep a safe zone. Output fuel has 1 decimal, so a
+      // printed 30.0 may be 29.95 (weak): only lanterns printed strictly above 30 are checked.
+      for (const L of s.lanterns.filter((x) => x.lit && (x.fuel === undefined || x.fuel > TUNING.low_fuel_threshold))) {
         for (const sh of s.shades) {
           const d = Math.hypot(sh.pos[0] - L.pos[0], sh.pos[2] - L.pos[2]);
           if (d <= TUNING.safe_radius) failures.push(`tick ${s.tick}: ${sh.id} is ${d.toFixed(3)} m from lit ${L.id}`);

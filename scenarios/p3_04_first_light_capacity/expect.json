@@ -1,0 +1,48 @@
+{
+  "requirement": "Ticket-03 §4 sức chứa = 10 + 2 × successful_lights, tối đa 20; §1 đèn chưa từng sáng cần 10; §5 thắp lần đầu +100",
+  "why": "successful_lights 4 nên sức chứa 18 ở tick 0. Tick 1 nạp 10 vào L1 (chưa từng sáng) thì thắp lần đầu: điểm 10×5 + 100 = 150, successful_lights 5 → sức chứa min(20, 20) = 20. Đi sang +X 3 m tới đống 22 đom đóm: chỉ nhặt được 20 (trần 20), còn lại 2.",
+  "args": {
+    "seed": 1,
+    "ticks": 60
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1",
+        "relight": false
+      }
+    }
+  ],
+  "event_counts": {
+    "mote_picked": 20
+  },
+  "snapshots": {
+    "0": {
+      "player": {
+        "capacity": 18,
+        "carried": 10
+      }
+    },
+    "10": {
+      "score": 150,
+      "player": {
+        "capacity": 20,
+        "carried": 0
+      }
+    },
+    "60": {
+      "motes_active": 2,
+      "player": {
+        "carried": 20,
+        "capacity": 20
+      }
+    }
+  },
+  "end": {
+    "ticks": 60,
+    "state": "playing",
+    "score": 150
+  }
+}

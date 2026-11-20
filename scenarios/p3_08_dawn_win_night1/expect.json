@@ -1,0 +1,23 @@
+{
+  "requirement": "Ticket-03 §3 hết giờ mà còn sống và số đèn sáng ≥ ceil(0.6 × 5) = 3 thì thắng dawn_survived; §5 thưởng bình minh: mỗi đèn sáng 50 + floor(fuel), mỗi Ngọn Lửa 50, không thưởng thời gian",
+  "why": "time_left 0.05 s = 3 tick. Tick 3: 3 đèn sáng = ngưỡng 3 → thắng. Fuel mỗi đèn = 3000 − 3 = 2997 đơn vị = 49.95 → floor 49. Điểm = 3 × (50 + 49) + 3 × 50 = 297 + 150 = 447.",
+  "args": {
+    "seed": 1,
+    "ticks": 10
+  },
+  "events": [
+    {
+      "tick": 3,
+      "name": "game_over",
+      "data": {
+        "result": "won",
+        "reason": "dawn_survived"
+      }
+    }
+  ],
+  "end": {
+    "ticks": 3,
+    "state": "won",
+    "score": 447
+  }
+}

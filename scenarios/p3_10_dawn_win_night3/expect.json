@@ -1,0 +1,52 @@
+{
+  "requirement": "Ticket-03 §3 Đêm 3 cần ceil(0.6 × 7) = 5 đèn; đèn đặt lit không có fuel thì fuel 100 (§7)",
+  "why": "5 đèn sáng = ngưỡng 5 → thắng ở tick 3. Fuel mặc định 100, sau 3 tick = 5997 đơn vị → floor 99. Điểm = 5 × (50 + 99) + 2 × 50 = 745 + 100 = 845.",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 10
+  },
+  "events": [
+    {
+      "tick": 3,
+      "name": "game_over",
+      "data": {
+        "result": "won",
+        "reason": "dawn_survived"
+      }
+    }
+  ],
+  "snapshots": {
+    "0": {
+      "lanterns": [
+        {
+          "fuel": 100
+        },
+        {
+          "fuel": 100
+        },
+        {
+          "fuel": 100
+        },
+        {
+          "fuel": 100
+        },
+        {
+          "fuel": 100
+        },
+        {
+          "fuel": 0,
+          "lit": false
+        },
+        {
+          "fuel": 0
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 3,
+    "state": "won",
+    "score": 845
+  }
+}

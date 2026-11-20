@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Sanity check that the test suite is not "always green": inject known bugs into
-// src/core/sim.js one at a time, run `node --test`, and expect at least one failure.
+// src/core/sim.js one at a time (Ticket-02 and Ticket-03 rules), run `node --test`, and expect at least one failure.
 // The original file is always restored (finally). Exit 1 if any mutant survives.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,10 +18,10 @@ const MUTANTS = [
   ['pickup ignores height', 'Math.abs(P.y - o.y) <= WORLD.pickupHeight', 'true'],
   ['no score for deposited motes', 'g.score += t.score.per_mote * amount;', ''],
   ['buttons are level- not edge-triggered', 'for (const b of BUTTONS) edge[b] = !!input[b] && !g.prev[b];', 'for (const b of BUTTONS) edge[b] = !!input[b];'],
-  ['no invulnerability', 'if (P.invuln > 0) return;', ''],
-  ['safe zone ignored', 'if (!L.lit) continue;', 'if (true) continue;'],
-  ['no eviction from a newly lit lantern', 'if (d < R) s.evict =', 'if (false) s.evict ='],
-  ['win bonus missing', 't.score.per_second_left * Math.floor(timeLeft(g) + 1e-9)', '0'],
+  ['no invulnerability', 'if (P.invuln > 0 || g.bench) return;', 'if (g.bench) return;'],
+  ['safe zone ignored', 'if (!L.lit || L.fuel < g.fuel.low) continue;', 'if (true) continue;'],
+  ['no eviction from a newly lit lantern', 'if (d >= R) continue;', 'continue;'],
+  ['dawn bonus ignores fuel', '+ Math.floor(L.fuel / FUEL_UNIT)', ''],
   ['dawn one tick late', 'g.simTick >= g.endSim', 'g.simTick > g.endSim'],
   ['pulse measured in XZ instead of 3D', 'Math.hypot(o.x - P.x, o.y - cy, o.z - P.z)', 'Math.hypot(o.x - P.x, o.z - P.z)'],
   ['dash has no cooldown', 'P.dashCd = P.charm > 0 ? 0 : T(t.dash_cooldown_s);', 'P.dashCd = 0;'],
@@ -31,6 +31,25 @@ const MUTANTS = [
   ['never fall off the island', 'if (P.y < WORLD.fallY && !P.fallen) {', 'if (false) {'],
   ['wind ignored', 'hx += Math.cos(a) * WORLD.windSpeed;', 'hx += 0;'],
   ['no recoil after a hit', "Object.assign(hitter, { state: 'recoil'", "Object.assign({}, { state: 'recoil'"],
+  // Ticket-03 (Phase 3)
+  ['low-fuel lanterns keep their safe zone', 'if (!L.lit || L.fuel < g.fuel.low) continue;', 'if (!L.lit) continue;'],
+  ['exactly 30 counts as weak', 'L.lit && L.fuel < g.fuel.low)) ?? near', 'L.lit && L.fuel <= g.fuel.low)) ?? near'],
+  ['fuel does not decay', 'if (L.lit) L.fuel = Math.max(0, L.fuel - F.decay);', ''],
+  ['drain does not stack', 'L.fuel = Math.max(0, L.fuel - F.drain);', 'L.fuel = Math.max(0, L.fuel - (s === g.shades[0] ? F.drain : 0));'],
+  ['refuel rounds down', 'Math.ceil((F.max - L.fuel) / F.perMote)', 'Math.floor((F.max - L.fuel) / F.perMote)'],
+  ['full lantern is still chosen', '(!l.lit || l.fuel < F.max)', '(!l.lit || l.fuel <= F.max)'],
+  ['relight costs 10', 'const cost = L.everLit ? t.relight_cost : t.lantern_cost;', 'const cost = t.lantern_cost;'],
+  ['relight scores like a first light', 'g.score += relight ? t.score.per_relight : t.score.per_lantern;', 'g.score += t.score.per_lantern;'],
+  ['capacity does not grow', 'P.successfulLights++;', ''],
+  ['capacity has no cap', 'Math.min(t.capacity_max, t.carry_capacity', 'Math.max(t.capacity_max * 0, t.carry_capacity'],
+  ['draining shade scores +5 only', "s.state === 'drain' ? t.score.per_stun_drain : t.score.per_stun", 't.score.per_stun'],
+  ['all lit still wins early', "if (P.flames <= 0) over = ['lost', 'no_flames'];", "if (P.flames <= 0) over = ['lost', 'no_flames'];\n  else if (g.lanterns.every((L) => L.lit)) over = ['won', 'dawn_survived'];"],
+  ['threshold rounds down', 'Math.ceil(t.win_ratio * total - 1e-9)', 'Math.floor(t.win_ratio * total)'],
+  ['lantern goes out one tick late', 'if (!L.lit || L.fuel > 0) continue;', 'if (!L.lit || L.fuel >= 0) continue;'],
+  ['drain breaks at 12 m instead of 6 m', 'if (d <= WORLD.drainBreak)', 'if (d <= WORLD.detect)'],
+  ['refuel to 30 does not evict', 'if (L.fuel >= F.low) ctx.safeOn.push(L);', ''],
+  ['wander prefers unlit over weak', 'return near(g.lanterns.filter((L) => L.lit && L.fuel < g.fuel.low)) ?? near(g.lanterns.filter((L) => !L.lit));', 'return near(g.lanterns.filter((L) => !L.lit)) ?? near(g.lanterns.filter((L) => L.lit && L.fuel < g.fuel.low));'],
+  ['bench shades chase Mây', 'const d = P.fallen || g.bench ? Infinity : distXZ(s, P);', 'const d = P.fallen ? Infinity : distXZ(s, P);'],
 ];
 
 const original = fs.readFileSync(FILE, 'utf8');

@@ -1,0 +1,68 @@
+{
+  "requirement": "Ticket-03 §1 châm dầu: used = min(mang, ceil((100 − fuel)/10)), fuel = min(100, fuel + 10·used); chọn đèn nhận được gần nhất (đèn sáng chưa đầy được chọn trước đèn tắt ở xa hơn)",
+  "why": "L1 (sáng, cách 1 m) gần hơn L2 (tắt, 1.5 m) nên được chọn. Tick 1: hao trước (bước 2) còn 3330 − 1 = 3329 đơn vị; used = min(7, ceil(2671/600) = 5) = 5, fuel = min(6000, 6329) = 100; còn mang 2; điểm 25. Tick 61: fuel 6000 − 60 = 5940 (99.0); used = min(2, ceil(60/600) = 1) = 1 → 100; mang 1; điểm 30. Tick 90: 6000 − 29 = 5971 = 99.517 → 99.5. L2 không nhận gì.",
+  "args": {
+    "seed": 1,
+    "ticks": 100
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "refuel",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 5,
+        "fuel": 100
+      }
+    },
+    {
+      "tick": 61,
+      "name": "refuel",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 1,
+        "fuel": 100
+      }
+    }
+  ],
+  "event_counts": {
+    "refuel": 2,
+    "deposit": 0,
+    "lantern_lit": 0
+  },
+  "snapshots": {
+    "10": {
+      "score": 25,
+      "player": {
+        "carried": 2
+      }
+    },
+    "90": {
+      "score": 30,
+      "player": {
+        "carried": 1,
+        "capacity": 10
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 99.5
+        },
+        {
+          "id": "L2",
+          "lit": false,
+          "deposited": 0
+        },
+        {},
+        {},
+        {}
+      ]
+    }
+  },
+  "end": {
+    "ticks": 100,
+    "state": "playing",
+    "score": 30
+  }
+}

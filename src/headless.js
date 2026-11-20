@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Headless runner — Test Contract v1.0, section B.
+// Headless runner — Test Contract v1.2 (section B of v1.0, v1.1 nights, v1.2 fuel fields/events).
 // node src/headless.js --seed <int> --night <1|2|3> [--scenario f] [--inputs f] --ticks N --out f.jsonl [--snapshot-every K]
 import fs from 'node:fs';
 import path from 'node:path';

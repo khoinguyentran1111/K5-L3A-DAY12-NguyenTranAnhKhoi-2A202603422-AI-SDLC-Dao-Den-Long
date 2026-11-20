@@ -1,0 +1,73 @@
+{
+  "requirement": "Ticket-03 §1 thắp lại chỉ cần 5; §5 +5 mỗi đom đóm + 40 thắp lại; §4 sức chứa +2; lantern_lit.relight = true; relit_count",
+  "why": "L1 đã từng sáng (ever_lit) nên cần 5: nạp min(7, 5 − 0) = 5, thắp lại ở tick 1. Điểm = 5×5 + 40 = 65. Mang 2, sức chứa 12, relit_count 1, fuel 100 ở tick 1. Tick 20: 6000 − 19 = 5981 = 99.683 → 99.7.",
+  "args": {
+    "seed": 1,
+    "ticks": 20
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "deposit",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 5,
+        "deposited": 5
+      }
+    },
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1",
+        "relight": true
+      }
+    }
+  ],
+  "snapshots": {
+    "0": {
+      "player": {
+        "capacity": 10
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": true,
+          "relit_count": 0
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "20": {
+      "score": 65,
+      "player": {
+        "carried": 2,
+        "capacity": 12
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 99.7,
+          "deposited": 5,
+          "ever_lit": true,
+          "relit_count": 1
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  },
+  "end": {
+    "ticks": 20,
+    "state": "playing",
+    "score": 65
+  }
+}

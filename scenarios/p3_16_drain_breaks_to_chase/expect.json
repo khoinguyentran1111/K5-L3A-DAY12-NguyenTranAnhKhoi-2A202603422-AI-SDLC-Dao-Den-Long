@@ -1,0 +1,46 @@
+{
+  "requirement": "Ticket-03 §2 drain → chase khi Mây vào trong 6 m (Bóng Mực đang drain không chuyển chase ở 12 m như wander)",
+  "why": "Mây cách S1 9 m (< 12 nhưng > 6): S1 vẫn drain. Mây đi +Z 0.1 m/tick trong 20 tick tới z = 16 (cách 7 m): vẫn drain ở tick 20. Đi tiếp ở tick 26…45: z = 16 + 0.1(t − 25); tick 30 còn cách 6.5 m (drain), khoảng tick 35 cách 6 m → chase (tick 40 chắc chắn đã chase).",
+  "args": {
+    "seed": 1,
+    "ticks": 60
+  },
+  "snapshots": {
+    "20": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          16
+        ]
+      },
+      "shades": [
+        {
+          "id": "S1",
+          "state": "drain"
+        }
+      ]
+    },
+    "30": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "drain"
+        }
+      ]
+    },
+    "40": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "chase",
+          "target_lantern_id": null
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 60,
+    "state": "playing"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "requirement": "Ticket-03 §2 nhiều Bóng Mực hút cộng dồn; §5 trúng Tỏa Sáng khi đang drain: tổng +15 mỗi con; drain → stunned",
+  "why": "Tick 1 bước 2: L1 hao 1 + S1 hút 5 + S2 hút 5: 1200 − 11 = 1189 = 19.82 → 19.8. Bước 7: tâm Tỏa Sáng (0, 0.8, 20); S1 cách 3.007 m, S2 cách 4.277 m (≤ 5), cả hai đang drain nên +15 mỗi con = 30. Tick 2: không còn ai hút, chỉ hao 1: 1188 = 19.8.",
+  "args": {
+    "seed": 1,
+    "ticks": 2,
+    "snapshot_every": 1
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "pulse",
+      "data": {
+        "stunned_ids": [
+          "S1",
+          "S2"
+        ]
+      }
+    }
+  ],
+  "snapshots": {
+    "0": {
+      "score": 0,
+      "shades": [
+        {
+          "state": "drain",
+          "target_lantern_id": "L1"
+        },
+        {
+          "state": "drain",
+          "target_lantern_id": "L1"
+        }
+      ]
+    },
+    "1": {
+      "score": 30,
+      "lanterns": [
+        {
+          "id": "L1",
+          "fuel": 19.8
+        },
+        {},
+        {},
+        {},
+        {}
+      ],
+      "shades": [
+        {
+          "state": "stunned"
+        },
+        {
+          "state": "stunned"
+        }
+      ]
+    },
+    "2": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "fuel": 19.8
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  },
+  "end": {
+    "ticks": 2,
+    "state": "playing",
+    "score": 30
+  }
+}

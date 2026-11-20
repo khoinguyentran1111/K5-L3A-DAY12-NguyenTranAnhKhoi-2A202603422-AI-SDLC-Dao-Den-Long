@@ -1,13 +1,17 @@
-// Pure game logic for Đảo Đèn Lồng (Test Contract v1.1, Ticket-02), shared by the headless
-// runner and the browser. Rules: no DOM, no Node APIs, no Date/Math.random — every random
-// choice comes from the seeded RNG, so (seed, night, scenario, inputs) -> identical output.
-// One call to step() = one tick, processed in the 12 mandatory phases of Ticket-02.
-// Assumptions B1..B25 are documented in docs/notes/phase2.md.
+// Pure game logic for Đảo Đèn Lồng (Test Contract v1.2, Ticket-03 on top of Ticket-02), shared
+// by the headless runner and the browser. Rules: no DOM, no Node APIs, no Date/Math.random —
+// every random choice comes from the seeded RNG, so (seed, night, scenario, inputs) -> identical
+// output. One call to step() = one tick, processed in the mandatory phases of Ticket-02, with the
+// Ticket-03 additions (fuel in phase 2, lanterns going out right after phase 2, dawn rule in 11).
+// Assumptions: B1..B25 in docs/notes/phase2.md, C1..C24 in docs/notes/phase3.md,
+// design decision in docs/adr/0001-lantern-fuel-and-dawn-win.md.
 import { mulberry32 } from './rng.js';
 import { getNight, blockedByObstacle } from './maps.js';
 
 export const TICK_RATE = 60;
-export const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+export const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
+// Fuel is kept in integer units of 1/60 (C1): 100 fuel = 6000 units, decay 1 unit per tick.
+export const FUEL_UNIT = 60;
 
 // Standard numbers of Ticket-02 that are not part of the contract `tuning` block.
 export const WORLD = Object.freeze({
@@ -56,7 +60,25 @@ export const WORLD = Object.freeze({
   windEvery: 1800,
   windTicks: 300,
   windSpeed: 2,
+  capacityPerLight: 2, // Ticket-03 §4: capacity = 10 + 2 × successful_lights
+  drainReach: 2, // Ticket-03 §2: drain when ≤ 2 m (XZ) from the weak lantern
+  drainBreak: 6, // Ticket-03 §2: drain -> chase when Mây comes within 6 m
+  drainEventEvery: 60,
 });
+
+// Derived per-tick fuel numbers (integer units, C1).
+export function fuelRules(t) {
+  return {
+    max: Math.round(t.fuel_max * FUEL_UNIT),
+    decay: Math.round((t.fuel_decay_per_s * FUEL_UNIT) / TICK_RATE),
+    drain: Math.round((t.drain_per_s * FUEL_UNIT) / TICK_RATE),
+    perMote: Math.round(t.fuel_per_mote * FUEL_UNIT),
+    low: Math.round(t.low_fuel_threshold * FUEL_UNIT),
+  };
+}
+export const fuelOut = (u) => Math.round(u / 6) / 10; // units -> fuel with 1 decimal
+export const litNeeded = (t, total) => Math.ceil(t.win_ratio * total - 1e-9);
+export const capacityOf = (t, P) => Math.min(t.capacity_max, t.carry_capacity + WORLD.capacityPerLight * P.successfulLights);
 
 export class ScenarioError extends Error {}
 
@@ -106,10 +128,15 @@ export function createGame({ tuning, seed = 1, night = 1, scenario = {} }) {
       dashCd: p.dash_cd_ticks ?? 0,
       pulseCd: p.pulse_cd_ticks ?? 0,
       charm: p.charm_ticks ?? 0,
+      successfulLights: p.successful_lights ?? 0,
       dashTicks: 0, dashDir: [0, 1], launch: null, fallen: false, respawnWait: 0, jumpedAt: -1,
     },
     prev: { jump: false, interact: false, pulse: false, dash: false, pause: false },
-    lanterns: map.lanterns.map((L) => ({ id: L.id, x: L.pos[0], y: L.pos[1], z: L.pos[2], lit: false, deposited: 0 })),
+    fuel: fuelRules(tuning),
+    lanterns: map.lanterns.map((L) => ({
+      id: L.id, x: L.pos[0], y: L.pos[1], z: L.pos[2], lit: false, deposited: 0, fuel: 0, everLit: false, relitCount: 0,
+    })),
+    bench: null, // Ticket-04 benchmark scene switches (see createBenchGame); null in normal play
     motes: [],
     nextMote: 1,
     shades: [],
@@ -136,10 +163,11 @@ export function createGame({ tuning, seed = 1, night = 1, scenario = {} }) {
     if (!L) throw new ScenarioError(`scenario.lanterns: night ${night} has no lantern ${l.id}`);
     if (l.pos) [L.x, L.y, L.z] = l.pos;
     if (l.deposited != null) L.deposited = l.deposited;
-    if (l.lit != null) {
-      L.lit = l.lit;
-      if (l.lit && l.deposited == null) L.deposited = tuning.lantern_cost;
-    }
+    if (l.lit != null) L.lit = l.lit;
+    // C6: lit without fuel -> 100; ever_lit defaults to lit; an unlit lantern has fuel 0
+    L.everLit = l.ever_lit ?? L.lit;
+    L.fuel = L.lit ? Math.round((l.fuel ?? tuning.fuel_max) * FUEL_UNIT) : 0;
+    if (L.lit && l.deposited == null) L.deposited = tuning.lantern_cost;
   }
 
   if (Array.isArray(sc.motes)) for (const m of sc.motes) addMote(g, m[0], m[1], m[2], 'random', null);
@@ -162,6 +190,14 @@ export function createGame({ tuning, seed = 1, night = 1, scenario = {} }) {
       }
       const sh = addShade(g, s.pos[0], s.pos[2], id, 'wander', 0);
       sh.state = s.state ?? decideState(g, sh);
+      if (s.target_lantern_id != null) {
+        if (!g.lanterns.some((L) => L.id === s.target_lantern_id)) {
+          throw new ScenarioError(`scenario.shades: night ${night} has no lantern ${s.target_lantern_id}`);
+        }
+        sh.target = s.target_lantern_id;
+      } else if (sh.state === 'drain') {
+        sh.target = [...g.lanterns].sort((a, b) => distXZ(sh, a) - distXZ(sh, b) || byId(a, b))[0].id; // C18
+      }
       const left = s.state_ticks_left ?? (sh.state === 'stunned' ? T(tuning.pulse_stun_s) : sh.state === 'recoil' ? WORLD.recoilTicks : sh.state === 'spawning' ? 1 : 0);
       if (sh.state === 'recoil') {
         sh.recoilMoves = left;
@@ -193,6 +229,40 @@ export function createGame({ tuning, seed = 1, night = 1, scenario = {} }) {
   return g;
 }
 
+// Ticket-04 §1 benchmark scene: Night 1, Mây still at (0,0,0), L1–L3 lit with fuel 100,
+// exactly 200 wandering shades and 100 motes spread uniformly over the island (seed 42).
+// Spawns, damage, pickups, fuel use and the end of the night are switched off; shades keep
+// moving by the normal wander rule (Mây is not a chase target: there is no player in the bench).
+export const BENCH = Object.freeze({ shades: 200, motes: 100, litLanterns: ['L1', 'L2', 'L3'] });
+
+export function createBenchGame({ tuning, seed = 42 }) {
+  const g = createGame({
+    tuning, seed, night: 1,
+    scenario: {
+      player: { pos: [0, 0, 0] }, random_motes: false, random_shades: false, motes: [], shades: [], charms: [],
+      lanterns: BENCH.litLanterns.map((id) => ({ id, lit: true, fuel: tuning.fuel_max })),
+    },
+  });
+  g.bench = { noFuel: true };
+  const isl = g.map.islands[0];
+  const R = tuning.safe_radius + WORLD.safeEpsilon;
+  const spot = () => {
+    const r = isl.r * Math.sqrt(g.rng()); // uniform over the disc
+    const a = g.rng() * Math.PI * 2;
+    return [isl.x + r * Math.cos(a), isl.z + r * Math.sin(a)];
+  };
+  while (g.shades.length < BENCH.shades) {
+    const [x, z] = spot();
+    if (g.lanterns.some((L) => L.lit && Math.hypot(x - L.x, z - L.z) < R)) continue; // safe zones stay empty
+    addShade(g, x, z, null, 'wander', 0);
+  }
+  for (let i = 0; i < BENCH.motes; i++) {
+    const [x, z] = spot();
+    addMote(g, x, g.map.ground(x, z) ?? 0, z, 'random', null);
+  }
+  return g;
+}
+
 function addMote(g, x, y, z, kind, point, ttl = null) {
   const m = { id: `M${g.nextMote++}`, x, y, z, kind, point, ttl, born: g.simTick };
   g.motes.push(m);
@@ -203,7 +273,7 @@ function addShade(g, x, z, id, state, stateTicks) {
   const s = {
     id: id ?? `S${g.nextShade++}`, x, z, y: hoverY(g, x, z, WORLD.shadeHover), state, stateTicks,
     pushTicks: 0, pushDir: [1, 0], recoilMoves: 0, recoilDir: [1, 0], evict: null,
-    wanderDir: [1, 0], wanderT: 0,
+    wanderDir: [1, 0], wanderT: 0, target: null, drainTicks: 0,
   };
   g.shades.push(s);
   return s;
@@ -248,8 +318,9 @@ export function step(g, input) {
   }
   if (g.paused) return events;
 
-  const ctx = { g, input, edge, emit, newlyLit: [] };
+  const ctx = { g, input, edge, emit, safeOn: [] };
   phase2Counters(ctx);
+  phase2bLanternsOut(ctx);
   phase3MovePlayer(ctx);
   phase4Pickup(ctx);
   phase5Interact(ctx);
@@ -262,8 +333,9 @@ export function step(g, input) {
   return events;
 }
 
-// 2. counters: time, cooldowns, invulnerability, stun, charm, dropped-mote TTL, charm respawn
-function phase2Counters({ g }) {
+// 2. counters: time, cooldowns, invulnerability, stun, charm, dropped-mote TTL, charm respawn,
+//    and (Ticket-03) fuel: every lit lantern decays, every shade in `drain` takes its share (C2)
+function phase2Counters({ g, emit }) {
   const P = g.player;
   g.simTick++;
   for (const k of ['invuln', 'dashCd', 'pulseCd', 'charm', 'respawnWait']) if (P[k] > 0) P[k]--;
@@ -276,6 +348,28 @@ function phase2Counters({ g }) {
   if (g.wind.ticks > 0) g.wind.ticks--;
   if (g.windEnabled && g.simTick % WORLD.windEvery === 0) {
     g.wind = { ticks: WORLD.windTicks, dir: Math.floor(g.rng() * 360) };
+  }
+
+  if (g.bench?.noFuel) return;
+  const F = g.fuel;
+  for (const L of g.lanterns) if (L.lit) L.fuel = Math.max(0, L.fuel - F.decay);
+  const due = [];
+  for (const s of [...g.shades].sort(byId)) {
+    if (s.state !== 'drain') continue;
+    const L = g.lanterns.find((l) => l.id === s.target);
+    if (!L || !L.lit) continue;
+    L.fuel = Math.max(0, L.fuel - F.drain); // several shades add up (Ticket-03 §2)
+    if (++s.drainTicks % WORLD.drainEventEvery === 0) due.push([L, s]); // C3
+  }
+  for (const [L, s] of due) emit('fuel_drain', { lantern_id: L.id, shade_id: s.id, fuel: fuelOut(L.fuel) });
+}
+
+// 2b. (Ticket-03) right after phase 2: a lit lantern with fuel ≤ 0 goes out
+function phase2bLanternsOut({ g, emit }) {
+  for (const L of g.lanterns) {
+    if (!L.lit || L.fuel > 0) continue;
+    Object.assign(L, { lit: false, deposited: 0, fuel: 0 }); // everLit stays true
+    emit('lantern_out', { lantern_id: L.id });
   }
 }
 
@@ -396,10 +490,11 @@ function phase3MovePlayer({ g, input, edge, emit }) {
 // 4. pick up motes and charms
 function phase4Pickup({ g, emit }) {
   const P = g.player;
-  if (P.fallen) return;
+  if (P.fallen || g.bench) return;
   const t = g.tuning;
   const reach = (o) => o.born < g.simTick && distXZ(P, o) <= t.pickup_radius && Math.abs(P.y - o.y) <= WORLD.pickupHeight;
-  for (let i = 0; i < g.motes.length && P.carried < t.carry_capacity; ) {
+  const cap = capacityOf(t, P);
+  for (let i = 0; i < g.motes.length && P.carried < cap; ) {
     if (reach(g.motes[i])) {
       g.motes.splice(i, 1);
       P.carried++;
@@ -416,37 +511,55 @@ function phase4Pickup({ g, emit }) {
   }
 }
 
-// 5. interact with lanterns
+// 5. interact with lanterns. Ticket-03: candidates are lanterns that can take motes (unlit, or
+//    lit but not full); nearest within 2 m, ties -> smaller id. Lit -> refuel; unlit -> deposit.
 function phase5Interact(ctx) {
   const { g, edge, emit } = ctx;
   const P = g.player;
   const t = g.tuning;
+  const F = g.fuel;
   if (!edge.interact || P.carried <= 0 || P.fallen) return;
   const L = g.lanterns
-    .filter((l) => !l.lit && distXZ(P, l) <= t.interact_radius)
+    .filter((l) => (!l.lit || l.fuel < F.max) && distXZ(P, l) <= t.interact_radius)
     .sort((a, b) => distXZ(P, a) - distXZ(P, b) || byId(a, b))[0];
   if (!L) return;
-  const amount = Math.min(P.carried, t.lantern_cost - L.deposited);
+  if (L.lit) {
+    const used = Math.min(P.carried, Math.ceil((F.max - L.fuel) / F.perMote));
+    P.carried -= used;
+    L.fuel = Math.min(F.max, L.fuel + F.perMote * used);
+    g.score += t.score.per_mote * used;
+    emit('refuel', { lantern_id: L.id, amount: used, fuel: fuelOut(L.fuel) });
+    if (L.fuel >= F.low) ctx.safeOn.push(L); // C11: the safe zone is (back) on
+    return;
+  }
+  const cost = L.everLit ? t.relight_cost : t.lantern_cost;
+  const amount = Math.min(P.carried, cost - L.deposited);
   if (amount <= 0) return;
   P.carried -= amount;
   L.deposited += amount;
   g.score += t.score.per_mote * amount;
   emit('deposit', { lantern_id: L.id, amount, deposited: L.deposited });
-  if (L.deposited >= t.lantern_cost) {
-    L.lit = true;
-    g.score += t.score.per_lantern;
-    ctx.newlyLit.push(L);
-    emit('lantern_lit', { lantern_id: L.id });
+  if (L.deposited >= cost) {
+    const relight = L.everLit;
+    Object.assign(L, { lit: true, fuel: F.max, everLit: true });
+    if (relight) L.relitCount++;
+    g.score += relight ? t.score.per_relight : t.score.per_lantern;
+    P.successfulLights++;
+    ctx.safeOn.push(L);
+    emit('lantern_lit', { lantern_id: L.id, relight });
   }
 }
 
-// 6. safe zones: shades caught inside a lantern that was just lit are evicted (≤ 30 ticks)
-function phase6SafeZones({ g, newlyLit }) {
+// 6. safe zones: shades inside a lantern that was just lit, or refuelled to ≥ 30, are evicted
+//    (≤ 30 ticks, no damage meanwhile); a draining shade gives up and becomes `wander`
+function phase6SafeZones({ g, safeOn }) {
   const R = g.tuning.safe_radius + WORLD.safeEpsilon;
-  for (const L of newlyLit) {
+  for (const L of safeOn) {
     for (const s of g.shades) {
       const d = distXZ(s, L);
-      if (d < R) s.evict = { x: L.x, z: L.z, left: WORLD.evictTicks, dir: unit(s.x - L.x, s.z - L.z) };
+      if (d >= R) continue;
+      s.evict = { x: L.x, z: L.z, left: WORLD.evictTicks, dir: unit(s.x - L.x, s.z - L.z) };
+      if (s.state === 'drain') Object.assign(s, { state: 'wander', target: null });
     }
   }
 }
@@ -463,13 +576,15 @@ function phase7Pulse({ g, edge, emit }) {
   const in3d = (o) => Math.hypot(o.x - P.x, o.y - cy, o.z - P.z) <= t.pulse_radius;
   const hit = g.shades.filter(in3d).sort(byId);
   for (const s of hit) {
+    // Ticket-03 §5: +5 per shade, +15 in total if it was draining right before
+    g.score += s.state === 'drain' ? t.score.per_stun_drain : t.score.per_stun;
+    s.target = null;
     s.state = 'stunned';
     s.stateTicks = T(t.pulse_stun_s);
     s.pushTicks = WORLD.pushTicks;
     s.pushDir = unit(s.x - P.x, s.z - P.z);
     s.recoilMoves = 0;
   }
-  g.score += t.score.per_stun * hit.length;
   emit('pulse', { stunned_ids: hit.map((s) => s.id) });
   for (const d of g.drifters.filter((x) => x.state !== 'removed' && in3d(x)).sort(byId)) {
     if (d.state === 'chase') {
@@ -494,7 +609,7 @@ function moveShade(g, s, dx, dz) {
   let nx = s.x + dx;
   let nz = s.z + dz;
   for (const L of g.lanterns) {
-    if (!L.lit) continue;
+    if (!L.lit || L.fuel < g.fuel.low) continue; // Ticket-03: fuel < 30 -> no safe zone (exactly 30 keeps it)
     const d = Math.hypot(nx - L.x, nz - L.z);
     if (d < R) {
       const [ux, uz] = unit(nx - L.x, nz - L.z);
@@ -507,6 +622,36 @@ function moveShade(g, s, dx, dz) {
   else if (ok(s.x, nz)) s.z = nz;
   else return false;
   return true;
+}
+
+// Ticket-03 §2 (C8): a wandering shade heads for the nearest lit lantern with fuel < 30 (ties ->
+// smaller id) and starts draining once ≤ 2 m away; otherwise it heads for the nearest unlit
+// lantern and lingers once ≤ 2 m away; with no such lantern it roams randomly (B9).
+export function wanderTarget(g, s) {
+  const near = (list) => list.sort((a, b) => distXZ(s, a) - distXZ(s, b) || byId(a, b))[0] ?? null;
+  return near(g.lanterns.filter((L) => L.lit && L.fuel < g.fuel.low)) ?? near(g.lanterns.filter((L) => !L.lit));
+}
+
+function wanderMove(g, s) {
+  const v = WORLD.wanderSpeed / TICK_RATE;
+  const L = wanderTarget(g, s);
+  s.target = L ? L.id : null;
+  if (!L) {
+    if (--s.wanderT <= 0) {
+      const a = g.rng() * Math.PI * 2;
+      s.wanderDir = [Math.cos(a), Math.sin(a)];
+      s.wanderT = WORLD.wanderTurnTicks;
+    }
+    if (!moveShade(g, s, s.wanderDir[0] * v, s.wanderDir[1] * v)) s.wanderT = 0;
+    return;
+  }
+  const dist = distXZ(s, L);
+  if (dist > WORLD.drainReach) {
+    const [ux, uz] = unit(L.x - s.x, L.z - s.z);
+    const m = Math.min(v, dist);
+    moveShade(g, s, ux * m, uz * m);
+  }
+  if (L.lit && distXZ(s, L) <= WORLD.drainReach) Object.assign(s, { state: 'drain', drainTicks: 0 });
 }
 
 function phase8MoveEnemies({ g }) {
@@ -525,7 +670,7 @@ function phase8MoveEnemies({ g }) {
       s.x += s.evict.dir[0] * stepLen;
       s.z += s.evict.dir[1] * stepLen;
       if (--s.evict.left <= 0) s.evict = null;
-      if (s.state === 'stunned' && s.stateTicks === 0) s.state = decideState(g, s);
+      if (s.state === 'stunned' && s.stateTicks === 0) s.state = 'wander'; // Ticket-03: stun ends -> wander
       s.y = hoverY(g, s.x, s.z, WORLD.shadeHover);
       continue;
     }
@@ -538,7 +683,7 @@ function phase8MoveEnemies({ g }) {
         s.y = hoverY(g, s.x, s.z, WORLD.shadeHover);
         continue;
       }
-      s.state = decideState(g, s);
+      s.state = 'wander'; // Ticket-03: stun ends -> wander (the chase check below still applies this tick)
     }
     if (s.state === 'recoil') {
       if (s.recoilMoves > 0) {
@@ -549,22 +694,25 @@ function phase8MoveEnemies({ g }) {
       s.y = hoverY(g, s.x, s.z, WORLD.shadeHover);
       continue;
     }
-    const d = P.fallen ? Infinity : distXZ(s, P);
+    const d = P.fallen || g.bench ? Infinity : distXZ(s, P); // bench: Mây is not a target
+    if (s.state === 'drain') {
+      // Ticket-03 §2: drain -> chase (Mây ≤ 6 m) | wander (lantern out, refuelled ≥ 30, or > 2 m away)
+      const L = g.lanterns.find((l) => l.id === s.target);
+      if (d <= WORLD.drainBreak) Object.assign(s, { state: 'chase', target: null });
+      else if (!L || !L.lit || L.fuel >= g.fuel.low || distXZ(s, L) > WORLD.drainReach) Object.assign(s, { state: 'wander', target: null });
+      else {
+        s.y = hoverY(g, s.x, s.z, WORLD.shadeHover);
+        continue; // stays still; it drains in phase 2 of the next tick
+      }
+    }
     if (s.state === 'chase' && d > WORLD.lose) s.state = 'wander';
     else if (s.state === 'wander' && d <= WORLD.detect) s.state = 'chase';
     if (s.state === 'chase') {
+      s.target = null; // a chasing shade does not change target (Mây)
       const [ux, uz] = unit(P.x - s.x, P.z - s.z);
       const m = Math.min(speed, d);
       moveShade(g, s, ux * m, uz * m);
-    } else {
-      if (--s.wanderT <= 0) {
-        const a = g.rng() * Math.PI * 2;
-        s.wanderDir = [Math.cos(a), Math.sin(a)];
-        s.wanderT = WORLD.wanderTurnTicks;
-      }
-      const v = WORLD.wanderSpeed / TICK_RATE;
-      if (!moveShade(g, s, s.wanderDir[0] * v, s.wanderDir[1] * v)) s.wanderT = 0;
-    }
+    } else wanderMove(g, s);
     s.y = hoverY(g, s.x, s.z, WORLD.shadeHover);
   }
 
@@ -609,7 +757,7 @@ function phase9Contacts({ g, emit }) {
     Object.assign(d, { stolen: amount, hasStolen: true, state: 'flee', fleeTicks: WORLD.drifterFleeTicks });
     emit('drifter_steal', { drifter_id: d.id, amount, carried: P.carried });
   }
-  if (P.invuln > 0) return;
+  if (P.invuln > 0 || g.bench) return; // bench: no damage
   const hitter = [...g.shades]
     .sort(byId)
     .find((s) => (s.state === 'chase' || s.state === 'wander') && !s.evict && distXZ(s, P) <= t.shade_hit_radius && Math.abs(s.y - P.y) <= WORLD.hitHeight);
@@ -637,6 +785,7 @@ function phase9Contacts({ g, emit }) {
 
 // 10. scheduled spawns (new entities only interact from the next tick)
 function phase10Spawn({ g, emit }) {
+  if (g.bench) return; // bench: no new entities
   const map = g.map;
   const st = g.simTick;
   if (g.randomMotes && st % WORLD.moteSpawnEvery === 0 && g.motes.length < WORLD.moteCap) {
@@ -677,19 +826,31 @@ function phase10Spawn({ g, emit }) {
   }
 }
 
-// 11. win / lose: no flames -> lost; all lit -> won (even on the last tick); out of time -> lost
+// 11. win / lose, after every other update of the tick (Ticket-03 §3): no flames -> lost
+//     (always first, even on the dawn tick); dawn -> won if lit lanterns ≥ ceil(0.6 × total)
 function phase11WinLose({ g, emit }) {
+  if (g.bench) return; // bench: the night never ends
   const P = g.player;
   const t = g.tuning;
   let over = null;
   if (P.flames <= 0) over = ['lost', 'no_flames'];
-  else if (g.lanterns.every((L) => L.lit)) over = ['won', 'all_lit'];
-  else if (g.simTick >= g.endSim) over = ['lost', 'dawn'];
+  else if (g.simTick >= g.endSim) {
+    const lit = g.lanterns.filter((L) => L.lit).length;
+    over = lit >= litNeeded(t, g.lanterns.length) ? ['won', 'dawn_survived'] : ['lost', 'dawn'];
+  }
   if (!over) return;
   [g.result, g.reason] = over;
   g.state = g.result;
-  if (g.result === 'won') g.score += t.score.per_second_left * Math.floor(timeLeft(g) + 1e-9) + t.score.per_flame_left * P.flames;
+  if (g.result === 'won') g.score += dawnBonus(g);
   emit('game_over', { result: g.result, reason: g.reason });
+}
+
+// Ticket-03 §5: per lit lantern 50 + floor(fuel); per flame left 50 (no time bonus any more)
+export function dawnBonus(g) {
+  const s = g.tuning.score;
+  let b = s.per_flame_left * g.player.flames;
+  for (const L of g.lanterns) if (L.lit) b += s.per_lit_lantern_dawn + Math.floor(L.fuel / FUEL_UNIT);
+  return b;
 }
 
 export function timeLeft(g) {
@@ -719,9 +880,13 @@ export function snapshot(g) {
       dash_cd_s: s(P.dashCd),
       pulse_cd_s: s(P.pulseCd),
       charm_s: s(P.charm),
+      capacity: capacityOf(g.tuning, P),
     },
-    lanterns: g.lanterns.map((L) => ({ id: L.id, pos: [r3(L.x), r3(L.y), r3(L.z)], lit: L.lit, deposited: L.deposited })),
-    shades: g.shades.map((x) => ({ id: x.id, pos: [r3(x.x), r3(x.y), r3(x.z)], state: x.state })),
+    lanterns: g.lanterns.map((L) => ({
+      id: L.id, pos: [r3(L.x), r3(L.y), r3(L.z)], lit: L.lit, deposited: L.deposited,
+      fuel: L.lit ? fuelOut(L.fuel) : 0, ever_lit: L.everLit, relit_count: L.relitCount,
+    })),
+    shades: g.shades.map((x) => ({ id: x.id, pos: [r3(x.x), r3(x.y), r3(x.z)], state: x.state, target_lantern_id: x.target })),
     motes_active: g.motes.length,
     motes: g.motes.map((m) => ({ id: m.id, pos: [r3(m.x), r3(m.y), r3(m.z)], kind: m.kind, ttl_s: m.ttl === null ? null : s(m.ttl) })),
     drifters: g.drifters.map((d) => ({ id: d.id, pos: [r3(d.x), r3(d.y), r3(d.z)], state: d.state, stolen: d.stolen })),

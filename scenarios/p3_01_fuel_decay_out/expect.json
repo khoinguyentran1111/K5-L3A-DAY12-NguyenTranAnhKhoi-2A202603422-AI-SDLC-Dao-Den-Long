@@ -1,0 +1,99 @@
+{
+  "requirement": "Ticket-03 §1 hao 1.0/giây (1/60 mỗi tick); fuel ≤ 0 thì tắt ngay sau bước 2, deposited = 0, lantern_out, ever_lit vẫn true",
+  "why": "fuel 1 = 60 đơn vị 1/60. Mỗi tick trừ 1: tick 30 còn 30 = 0.5; tick 60 còn 0 thì tắt (lantern_out ở tick 60). Đèn tắt có fuel 0, deposited 0, ever_lit true.",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 60,
+      "name": "lantern_out",
+      "data": {
+        "lantern_id": "L1"
+      }
+    }
+  ],
+  "event_counts": {
+    "lantern_out": 1
+  },
+  "snapshots": {
+    "0": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 1,
+          "deposited": 10,
+          "ever_lit": true
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "30": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 0.5
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "50": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 0.2
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "60": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": false,
+          "fuel": 0,
+          "deposited": 0,
+          "ever_lit": true,
+          "relit_count": 0
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "120": {
+      "state": "playing",
+      "score": 0,
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": false,
+          "fuel": 0
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing",
+    "score": 0
+  }
+}

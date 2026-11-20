@@ -1,0 +1,68 @@
+{
+  "requirement": "Ticket-03 §2 đèn fuel < 30 mất vùng an toàn; đúng 30 vẫn còn",
+  "why": "fuel 30.5 = 1830 đơn vị. Tick t ≤ 30: fuel = 1830 − t ≥ 1800 (đúng 30 ở tick 30) nên S1 đuổi Mây nhưng bị chặn ở mép 6.01 (z = 18.99). Tick 31: 1799 < 1800 nên vùng an toàn mất: S1 tiến 4/60 m, z = 19.057. Sau đó S1 tới chỗ Mây và gây đúng 1 hit trong 150 tick (còn bất tử và recoil sau hit).",
+  "args": {
+    "seed": 1,
+    "ticks": 150,
+    "snapshot_every": 1
+  },
+  "event_counts": {
+    "player_hit": 1
+  },
+  "snapshots": {
+    "30": {
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 30
+        },
+        {},
+        {},
+        {},
+        {}
+      ],
+      "shades": [
+        {
+          "id": "S1",
+          "state": "chase",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 18.99,
+              "tol": 0.002
+            }
+          ]
+        }
+      ]
+    },
+    "31": {
+      "shades": [
+        {
+          "id": "S1",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 19.057,
+              "tol": 0.002
+            }
+          ]
+        }
+      ]
+    },
+    "150": {
+      "player": {
+        "flames": 2
+      }
+    }
+  },
+  "invariants": [
+    "shades_outside_safe_radius_of_lit_lanterns"
+  ],
+  "end": {
+    "ticks": 150,
+    "state": "playing"
+  }
+}

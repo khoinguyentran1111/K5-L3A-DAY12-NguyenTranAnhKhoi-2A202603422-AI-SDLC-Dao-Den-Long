@@ -1,0 +1,134 @@
+{
+  "requirement": "M3 Đêm 3: 300 s, 7 đèn đúng tọa độ, Bùa C1 (30,0,25), C2 (−30,0,25); xuất phát (0,0,−30) (giả định B2) (Ticket-03 §3)",
+  "why": "Tọa độ chép từ Ticket-02 Phần 2; thời lượng Đêm 3 = 300 s theo Ticket-03 §3. Mọi đèn chưa sáng: fuel 0, ever_lit false.",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 0
+  },
+  "snapshots": {
+    "0": {
+      "night": 3,
+      "time_left_s": 300,
+      "player": {
+        "pos": [
+          0,
+          0,
+          -30
+        ],
+        "grounded": true,
+        "capacity": 10
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "pos": [
+            0,
+            6,
+            6
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L2",
+          "pos": [
+            18,
+            3,
+            10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L3",
+          "pos": [
+            -18,
+            3,
+            10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L4",
+          "pos": [
+            35,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L5",
+          "pos": [
+            -35,
+            0,
+            -10
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L6",
+          "pos": [
+            20,
+            0,
+            -35
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L7",
+          "pos": [
+            -20,
+            0,
+            -35
+          ],
+          "lit": false,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        }
+      ],
+      "charms": [
+        {
+          "id": "C1",
+          "pos": [
+            30,
+            0,
+            25
+          ]
+        },
+        {
+          "id": "C2",
+          "pos": [
+            -30,
+            0,
+            25
+          ]
+        }
+      ]
+    }
+  },
+  "invariants": [
+    "random_motes_on_points_distinct"
+  ],
+  "end": {
+    "ticks": 0
+  }
+}

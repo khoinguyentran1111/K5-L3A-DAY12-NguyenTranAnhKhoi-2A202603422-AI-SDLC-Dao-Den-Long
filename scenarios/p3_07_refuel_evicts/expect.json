@@ -1,0 +1,76 @@
+{
+  "requirement": "Ticket-03 §2 châm dầu lên ≥ 30 khi có Bóng Mực trong 6 m: đẩy ra mép trong ≤ 30 tick, không sát thương; drain → wander khi fuel ≥ 30",
+  "why": "Tick 1: bước 2 trừ 1 + 5: 1500 − 6 = 1494. Bước 5: used = min(10, ceil(4506/600) = 8) = 8, fuel = min(6000, 6294) = 100; mang 2; điểm 40. Bước 6: S1 cách L1 2 m < 6.01 nên bị đẩy và về wander. Đẩy theo bán kính tới mép 6.01 trong 30 tick: z = 25 − 6.01 = 18.99 ở tick 30. Sau đó S1 (cách Mây 7.51 ≤ 12) đuổi nhưng bị vùng an toàn (fuel ≥ 30) chặn ở mép: không hit.",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "refuel",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 8,
+        "fuel": 100
+      }
+    }
+  ],
+  "event_counts": {
+    "player_hit": 0,
+    "fuel_drain": 0
+  },
+  "snapshots": {
+    "10": {
+      "score": 40,
+      "player": {
+        "carried": 2
+      },
+      "shades": [
+        {
+          "id": "S1",
+          "state": "wander"
+        }
+      ]
+    },
+    "30": {
+      "shades": [
+        {
+          "id": "S1",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 18.99,
+              "tol": 0.002
+            }
+          ]
+        }
+      ]
+    },
+    "60": {
+      "player": {
+        "flames": 3
+      },
+      "shades": [
+        {
+          "id": "S1",
+          "state": "chase",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 18.99,
+              "tol": 0.002
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing",
+    "score": 40
+  }
+}

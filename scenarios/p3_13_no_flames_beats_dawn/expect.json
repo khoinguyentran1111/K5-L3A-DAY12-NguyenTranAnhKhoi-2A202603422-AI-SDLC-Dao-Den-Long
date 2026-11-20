@@ -1,0 +1,31 @@
+{
+  "requirement": "Ticket-03 §3 hết Ngọn Lửa thua no_flames ngay lập tức, kể cả ở tick cuối (ưu tiên trước bình minh)",
+  "why": "time_left 0.016 s → bình minh ở tick ceil(0.96) = 1. Tick 1: S1 đuổi 4/60 m, cách Mây 0.433 ≤ 1 → hit, còn 0 lửa. Dù 3 đèn sáng (đủ ngưỡng), bước xét cho no_flames trước. Thua thì không thưởng: điểm 0.",
+  "args": {
+    "seed": 1,
+    "ticks": 10
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "player_hit",
+      "data": {
+        "by": "shade",
+        "flames": 0
+      }
+    },
+    {
+      "tick": 1,
+      "name": "game_over",
+      "data": {
+        "result": "lost",
+        "reason": "no_flames"
+      }
+    }
+  ],
+  "end": {
+    "ticks": 1,
+    "state": "lost",
+    "score": 0
+  }
+}

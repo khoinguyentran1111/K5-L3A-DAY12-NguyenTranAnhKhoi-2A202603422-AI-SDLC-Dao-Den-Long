@@ -1,4 +1,4 @@
-// Validation of contract files (inputs / scenario) and CLI arguments — Test Contract v1.1.
+// Validation of contract files (inputs / scenario) and CLI arguments — Test Contract v1.2.
 // Malformed files throw FormatError -> headless exits with code 2.
 import { SHADE_STATES } from './sim.js';
 
@@ -49,7 +49,7 @@ export function validateScenario(obj) {
     const p = obj.player;
     check(isObj(p), 'scenario.player: must be an object');
     if ('pos' in p) check(isVec3(p.pos), 'scenario.player.pos: must be [x, y, z]');
-    for (const k of ['carried', 'flames', 'invuln_ticks', 'dash_cd_ticks', 'pulse_cd_ticks', 'charm_ticks']) optInt(p, k, 'scenario.player');
+    for (const k of ['carried', 'flames', 'invuln_ticks', 'dash_cd_ticks', 'pulse_cd_ticks', 'charm_ticks', 'successful_lights']) optInt(p, k, 'scenario.player');
   }
   for (const k of ['random_motes', 'random_shades', 'random_drifters', 'wind_enabled']) {
     if (k in obj) check(typeof obj[k] === 'boolean', `scenario.${k}: must be boolean`);
@@ -75,6 +75,7 @@ export function validateScenario(obj) {
       optInt(s, 'state_ticks_left', at);
       optInt(s, 'stolen', at);
       optInt(s, 'respawn_ticks', at);
+      if ('target_lantern_id' in s) check(typeof s.target_lantern_id === 'string' && /^L[1-7]$/.test(s.target_lantern_id), `${at}.target_lantern_id: must be L1..L7`);
       if ('available' in s) check(typeof s.available === 'boolean', `${at}.available: must be boolean`);
     });
   };
@@ -90,6 +91,8 @@ export function validateScenario(obj) {
       if ('pos' in l) check(isVec3(l.pos), `${at}.pos: must be [x, y, z]`);
       optInt(l, 'deposited', at);
       if ('lit' in l) check(typeof l.lit === 'boolean', `${at}.lit: must be boolean`);
+      if ('ever_lit' in l) check(typeof l.ever_lit === 'boolean', `${at}.ever_lit: must be boolean`);
+      if ('fuel' in l) check(isNum(l.fuel) && l.fuel >= 0 && l.fuel <= 100, `${at}.fuel: must be a number in [0, 100]`);
     });
   }
   if ('time_left_s' in obj) check(isNum(obj.time_left_s) && obj.time_left_s >= 0, 'scenario.time_left_s: must be a number >= 0');

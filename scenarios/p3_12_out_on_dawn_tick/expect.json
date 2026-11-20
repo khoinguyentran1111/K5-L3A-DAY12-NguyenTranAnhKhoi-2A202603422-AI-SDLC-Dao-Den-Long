@@ -1,0 +1,30 @@
+{
+  "requirement": "Ticket-03 §3 thứ tự: đèn hết dầu tắt ngay sau bước 2, xét thắng/thua sau mọi cập nhật kể cả tick bình minh",
+  "why": "L3 fuel 0.05 = 3 đơn vị: tick 3 còn 0 nên tắt (lantern_out) trước bước xét thắng. Bình minh ở tick 3 chỉ còn 2 đèn sáng < 3 → thua dawn.",
+  "args": {
+    "seed": 1,
+    "ticks": 10
+  },
+  "events": [
+    {
+      "tick": 3,
+      "name": "lantern_out",
+      "data": {
+        "lantern_id": "L3"
+      }
+    },
+    {
+      "tick": 3,
+      "name": "game_over",
+      "data": {
+        "result": "lost",
+        "reason": "dawn"
+      }
+    }
+  ],
+  "end": {
+    "ticks": 3,
+    "state": "lost",
+    "score": 0
+  }
+}

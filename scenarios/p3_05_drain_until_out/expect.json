@@ -1,0 +1,137 @@
+{
+  "requirement": "Ticket-03 §2 Bóng Mực wander chọn đèn fuel < 30, cách ≤ 2 m thì drain (đứng yên, hút 5/giây, đèn vẫn hao 1/giây); fuel_drain mỗi 60 tick; đèn tắt thì drain → wander",
+  "why": "Mây ở (0,0,0) cách S1 23 m (> 12) nên S1 wander. L1 fuel 29 < 30, S1 cách L1 đúng 2 m nên chuyển drain ngay tick 1 (không di chuyển). Tick 1 chỉ hao 1: 1740 − 1 = 1739. Từ tick 2 trừ 1 + 5 = 6 mỗi tick: fuel(t) = 1745 − 6t. Tick 10: 1685 = 28.08 → 28.1. fuel_drain ở lần hút thứ 60, 120, 180, 240 = tick 61, 121, 181, 241 với fuel 1379 → 23.0, 1019 → 17.0, 659 → 11.0, 299 → 5.0. Tick 291: 1745 − 1746 < 0 nên tắt (lantern_out). S1 về wander; đèn tắt gần nhất là chính L1 (2 m) nên đứng lại. Không cộng điểm.",
+  "args": {
+    "seed": 1,
+    "ticks": 300
+  },
+  "events": [
+    {
+      "tick": 61,
+      "name": "fuel_drain",
+      "data": {
+        "lantern_id": "L1",
+        "shade_id": "S1",
+        "fuel": 23
+      }
+    },
+    {
+      "tick": 121,
+      "name": "fuel_drain",
+      "data": {
+        "lantern_id": "L1",
+        "shade_id": "S1",
+        "fuel": 17
+      }
+    },
+    {
+      "tick": 181,
+      "name": "fuel_drain",
+      "data": {
+        "lantern_id": "L1",
+        "shade_id": "S1",
+        "fuel": 11
+      }
+    },
+    {
+      "tick": 241,
+      "name": "fuel_drain",
+      "data": {
+        "lantern_id": "L1",
+        "shade_id": "S1",
+        "fuel": 5
+      }
+    },
+    {
+      "tick": 291,
+      "name": "lantern_out",
+      "data": {
+        "lantern_id": "L1"
+      }
+    }
+  ],
+  "event_counts": {
+    "fuel_drain": 4,
+    "lantern_out": 1
+  },
+  "snapshots": {
+    "10": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "drain",
+          "target_lantern_id": "L1",
+          "pos": [
+            0,
+            1,
+            23
+          ]
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "fuel": 28.1
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "290": {
+      "shades": [
+        {
+          "state": "drain"
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    },
+    "300": {
+      "score": 0,
+      "shades": [
+        {
+          "id": "S1",
+          "state": "wander",
+          "pos": [
+            0,
+            1,
+            23
+          ]
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": false,
+          "fuel": 0,
+          "deposited": 0,
+          "ever_lit": true
+        },
+        {},
+        {},
+        {},
+        {}
+      ]
+    }
+  },
+  "invariants": [
+    "shades_outside_safe_radius_of_lit_lanterns",
+    "shade_states_valid"
+  ],
+  "end": {
+    "ticks": 300,
+    "state": "playing",
+    "score": 0
+  }
+}

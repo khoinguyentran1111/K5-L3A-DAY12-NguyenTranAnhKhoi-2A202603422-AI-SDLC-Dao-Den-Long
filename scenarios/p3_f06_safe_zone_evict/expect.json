@@ -1,0 +1,66 @@
+{
+  "requirement": "Thay p2_f06 (Ticket-03 §5 +5 mỗi đom đóm): đèn vừa thắp đẩy Bóng Mực ra mép trong ≤ 30 tick, không sát thương",
+  "why": "Như p2_f06 (đẩy S1 tới z = 18.99 ở tick 30, không hit); điểm = 1×5 + 100 = 105.",
+  "args": {
+    "seed": 1,
+    "ticks": 300
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1",
+        "relight": false
+      }
+    }
+  ],
+  "event_counts": {
+    "player_hit": 0
+  },
+  "snapshots": {
+    "10": {
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            21.997
+          ]
+        }
+      ]
+    },
+    "30": {
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            18.99
+          ]
+        }
+      ]
+    },
+    "300": {
+      "score": 105,
+      "player": {
+        "flames": 3
+      },
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            18.99
+          ],
+          "state": "chase"
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 300,
+    "state": "playing",
+    "score": 105
+  }
+}

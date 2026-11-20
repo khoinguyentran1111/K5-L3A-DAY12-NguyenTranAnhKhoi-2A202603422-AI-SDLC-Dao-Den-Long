@@ -1,0 +1,48 @@
+{
+  "requirement": "Ticket-03 §2 Bóng Mực wander đi tới đèn sáng có fuel < 30 gần nhất (ưu tiên hơn đèn tắt dù đèn tắt gần hơn), tới ≤ 2 m thì drain",
+  "why": "S1 cách L1 (fuel 29) 3 m, cách L2 (tắt) 2.5 m: chọn L1. Đi với tốc độ wander 1.5 m/s = 0.025 m/tick theo +Z: tick 20 ở z = 22.5. Tới ≤ 2 m (z ≥ 23) sau khoảng 40 tick thì drain và đứng yên.",
+  "args": {
+    "seed": 1,
+    "ticks": 60
+  },
+  "snapshots": {
+    "20": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "wander",
+          "target_lantern_id": "L1",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 22.5,
+              "tol": 0.002
+            }
+          ]
+        }
+      ]
+    },
+    "60": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "drain",
+          "target_lantern_id": "L1",
+          "pos": [
+            0,
+            1,
+            {
+              "approx": 23,
+              "tol": 0.03
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 60,
+    "state": "playing"
+  }
+}

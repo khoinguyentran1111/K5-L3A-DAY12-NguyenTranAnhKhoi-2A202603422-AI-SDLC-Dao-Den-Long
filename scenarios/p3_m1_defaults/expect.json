@@ -1,0 +1,72 @@
+{
+  "requirement": "Ticket-03 §3 Đêm 1 = 240 s; §7 snapshot v1.2 có fuel/ever_lit/relit_count cho đèn và capacity cho người chơi",
+  "why": "Đầu Đêm: chưa đèn nào sáng nên fuel 0, ever_lit false, relit_count 0; successful_lights = 0 nên sức chứa = 10.",
+  "args": {
+    "seed": 1,
+    "night": 1,
+    "ticks": 0
+  },
+  "snapshots": {
+    "0": {
+      "night": 1,
+      "time_left_s": 240,
+      "score": 0,
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "flames": 3,
+        "carried": 0,
+        "capacity": 10
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": false,
+          "deposited": 0,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L2",
+          "lit": false,
+          "deposited": 0,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L3",
+          "lit": false,
+          "deposited": 0,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L4",
+          "lit": false,
+          "deposited": 0,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        },
+        {
+          "id": "L5",
+          "lit": false,
+          "deposited": 0,
+          "fuel": 0,
+          "ever_lit": false,
+          "relit_count": 0
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 0,
+    "state": "playing"
+  }
+}
