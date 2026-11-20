@@ -1,6 +1,6 @@
 ---
 name: verify-phase
-description: Chạy toàn bộ kiểm chứng của Đảo Đèn Lồng và lưu bằng chứng cho một phase (test, scenario headless cả 3 Đêm, tất định, hiệu năng 21.600 tick, mutation, kiểm tra trình duyệt, FPS bằng GPU, ảnh). Dùng ở cuối mỗi phase, trước khi gắn tag phase-N, hoặc khi người dùng hỏi "đã đúng chưa / có bằng chứng chưa".
+description: Chạy toàn bộ kiểm chứng của Đảo Đèn Lồng và lưu bằng chứng cho một phase (test, scenario headless cả 3 Đêm, tất định, hiệu năng một Đêm đầy đủ, mutation, kiểm tra trình duyệt, FPS bằng GPU, ảnh). Dùng ở cuối mỗi phase, trước khi gắn tag phase-N, hoặc khi người dùng hỏi "đã đúng chưa / có bằng chứng chưa".
 ---
 
 # Kiểm chứng một phase
