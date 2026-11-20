@@ -1,6 +1,6 @@
-// Validation of contract files (inputs / scenario) and CLI arguments.
+// Validation of contract files (inputs / scenario) and CLI arguments — Test Contract v1.1.
 // Malformed files throw FormatError -> headless exits with code 2.
-import { LANTERN_IDS } from './sim.js';
+import { SHADE_STATES } from './sim.js';
 
 export class FormatError extends Error {}
 export class UsageError extends Error {}
@@ -14,7 +14,8 @@ function check(cond, msg) {
   if (!cond) throw new FormatError(msg);
 }
 
-const BUTTONS = ['jump', 'interact', 'pulse', 'dash'];
+const BUTTONS = ['jump', 'interact', 'pulse', 'dash', 'pause'];
+export const NIGHTS_AVAILABLE = [1, 2, 3];
 
 export function validateInputs(obj) {
   check(isObj(obj), 'inputs: root must be an object');
@@ -38,42 +39,56 @@ export function validateInputs(obj) {
   return obj;
 }
 
+function optInt(o, k, at) {
+  if (k in o) check(isNonNegInt(o[k]), `${at}.${k}: must be a non-negative integer`);
+}
+
 export function validateScenario(obj) {
   check(isObj(obj), 'scenario: root must be an object');
   if ('player' in obj) {
     const p = obj.player;
     check(isObj(p), 'scenario.player: must be an object');
     if ('pos' in p) check(isVec3(p.pos), 'scenario.player.pos: must be [x, y, z]');
-    if ('carried' in p) check(isNonNegInt(p.carried), 'scenario.player.carried: must be a non-negative integer');
-    if ('flames' in p) check(isNonNegInt(p.flames), 'scenario.player.flames: must be a non-negative integer');
+    for (const k of ['carried', 'flames', 'invuln_ticks', 'dash_cd_ticks', 'pulse_cd_ticks', 'charm_ticks']) optInt(p, k, 'scenario.player');
   }
-  for (const k of ['random_motes', 'random_shades']) {
+  for (const k of ['random_motes', 'random_shades', 'random_drifters', 'wind_enabled']) {
     if (k in obj) check(typeof obj[k] === 'boolean', `scenario.${k}: must be boolean`);
   }
   if ('motes' in obj) {
     check(Array.isArray(obj.motes), 'scenario.motes: must be an array');
     obj.motes.forEach((m, i) => check(isVec3(m), `scenario.motes[${i}]: must be [x, y, z]`));
   }
-  if ('shades' in obj) {
-    check(Array.isArray(obj.shades), 'scenario.shades: must be an array');
+  const entityList = (key, states) => {
+    if (!(key in obj)) return;
+    check(Array.isArray(obj[key]), `scenario.${key}: must be an array`);
     const ids = new Set();
-    obj.shades.forEach((s, i) => {
-      check(isObj(s) && isVec3(s.pos), `scenario.shades[${i}]: must be { "pos": [x, y, z] }`);
+    obj[key].forEach((s, i) => {
+      const at = `scenario.${key}[${i}]`;
+      check(isObj(s), `${at}: must be an object`);
+      if (key !== 'charms' || 'pos' in s) check(isVec3(s.pos), `${at}.pos: must be [x, y, z]`);
       if ('id' in s) {
-        check(typeof s.id === 'string' && s.id.length > 0, `scenario.shades[${i}].id: must be a non-empty string`);
-        check(!ids.has(s.id), `scenario.shades[${i}].id: duplicate id ${s.id}`);
+        check(typeof s.id === 'string' && s.id.length > 0, `${at}.id: must be a non-empty string`);
+        check(!ids.has(s.id), `${at}.id: duplicate id ${s.id}`);
         ids.add(s.id);
       }
+      if (states && 'state' in s) check(states.includes(s.state), `${at}.state: must be one of ${states.join(', ')}`);
+      optInt(s, 'state_ticks_left', at);
+      optInt(s, 'stolen', at);
+      optInt(s, 'respawn_ticks', at);
+      if ('available' in s) check(typeof s.available === 'boolean', `${at}.available: must be boolean`);
     });
-  }
+  };
+  entityList('shades', SHADE_STATES);
+  entityList('drifters', ['idle', 'chase', 'flee', 'removed']);
+  entityList('charms', null);
   if ('lanterns' in obj) {
     check(Array.isArray(obj.lanterns), 'scenario.lanterns: must be an array');
     obj.lanterns.forEach((l, i) => {
       const at = `scenario.lanterns[${i}]`;
       check(isObj(l), `${at}: must be an object`);
-      check(LANTERN_IDS.includes(l.id), `${at}.id: must be one of ${LANTERN_IDS.join(', ')}`);
+      check(typeof l.id === 'string' && /^L[1-7]$/.test(l.id), `${at}.id: must be L1..L7`);
       if ('pos' in l) check(isVec3(l.pos), `${at}.pos: must be [x, y, z]`);
-      if ('deposited' in l) check(isNonNegInt(l.deposited), `${at}.deposited: must be a non-negative integer`);
+      optInt(l, 'deposited', at);
       if ('lit' in l) check(typeof l.lit === 'boolean', `${at}.lit: must be boolean`);
     });
   }
@@ -82,7 +97,7 @@ export function validateScenario(obj) {
 }
 
 const USAGE =
-  'usage: node src/headless.js --seed <int> --night 1 [--scenario <file.json>] [--inputs <file.json>] ' +
+  'usage: node src/headless.js --seed <int> --night <1|2|3> [--scenario <file.json>] [--inputs <file.json>] ' +
   '--ticks <int> --out <file.jsonl> [--snapshot-every <int>]';
 
 export function parseCli(argv) {
@@ -123,7 +138,7 @@ export function parseCli(argv) {
     out: raw.out,
   };
   if (!args.out) throw new UsageError(`--out is required\n${USAGE}`);
-  if (args.night !== 1) throw new UsageError(`--night ${args.night} is not available (only night 1 exists in this version)`);
+  if (!NIGHTS_AVAILABLE.includes(args.night)) throw new UsageError(`--night ${args.night} is not available (1, 2 or 3)`);
   const known = new Set(['seed', 'night', 'ticks', 'snapshot-every', 'scenario', 'inputs', 'out']);
   for (const k of Object.keys(raw)) if (!known.has(k)) warnings.push(`ignoring unknown option --${k}`);
   return { args, warnings };

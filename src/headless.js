@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Headless runner — Test Contract v1.0, section B.
-// node src/headless.js --seed <int> --night 1 [--scenario f] [--inputs f] --ticks N --out f.jsonl [--snapshot-every K]
+// node src/headless.js --seed <int> --night <1|2|3> [--scenario f] [--inputs f] --ticks N --out f.jsonl [--snapshot-every K]
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createGame, step, snapshot } from './core/sim.js';
+import { createGame, step, snapshot, ScenarioError } from './core/sim.js';
 import { parseCli, validateInputs, validateScenario, FormatError, UsageError } from './core/io.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,13 +30,14 @@ function readJsonFile(file, label, validate) {
 }
 
 /** Runs the simulation and calls write(line) for every JSONL line. Returns the end record. */
-export function runHeadless({ seed, ticks, snapshotEvery = 10, scenario = {}, inputs = { frames: [] }, tuning }, write) {
-  const g = createGame({ tuning, seed, scenario });
+export function runHeadless({ seed, night = 1, ticks, snapshotEvery = 10, scenario = {}, inputs = { frames: [] }, tuning }, write) {
+  const g = createGame({ tuning, seed, night, scenario });
   const frames = inputs.frames || [];
   const cur = { move: [0, 0], cam_yaw_deg: 0, jump: false, interact: false, pulse: false, dash: false };
   let fi = 0;
   write(snapshot(g));
-  for (let k = 0; k < ticks && g.state === 'playing'; k++) {
+  write({ type: 'event', tick: 0, name: 'night_start', data: { night } }); // assumption B17
+  for (let k = 0; k < ticks && (g.state === 'playing' || g.state === 'paused'); k++) {
     while (fi < frames.length && frames[fi].tick <= k) {
       const { tick: _t, ...fields } = frames[fi++];
       Object.assign(cur, fields);
@@ -86,13 +87,22 @@ function main() {
     if (buf.length) fs.writeSync(fd, buf.join(''));
     buf = [];
   };
-  runHeadless(
-    { seed: args.seed, ticks: args.ticks, snapshotEvery: args.snapshotEvery, scenario, inputs, tuning: loadTuning() },
-    (obj) => {
-      buf.push(JSON.stringify(obj) + '\n');
-      if (buf.length >= 2000) flush();
-    },
-  );
+  try {
+    runHeadless(
+      { seed: args.seed, night: args.night, ticks: args.ticks, snapshotEvery: args.snapshotEvery, scenario, inputs, tuning: loadTuning() },
+      (obj) => {
+        buf.push(JSON.stringify(obj) + '\n');
+        if (buf.length >= 2000) flush();
+      },
+    );
+  } catch (e) {
+    fs.closeSync(fd);
+    if (e instanceof ScenarioError) {
+      process.stderr.write(`error: ${e.message}\n`);
+      return 2;
+    }
+    throw e;
+  }
   flush();
   fs.closeSync(fd);
   return 0;
