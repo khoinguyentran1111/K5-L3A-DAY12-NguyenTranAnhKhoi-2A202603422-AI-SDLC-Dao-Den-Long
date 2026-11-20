@@ -1,235 +1,143 @@
-// Browser client: renders the shared simulation (src/core/sim.js) with Three.js.
-// The game logic runs at a fixed 60 ticks/s exactly like headless; this file only
-// turns keyboard/mouse into contract-style inputs and draws the state.
+// Browser client: the 3-night campaign around the shared simulation (src/core/sim.js).
+// Logic runs at a fixed 60 ticks/s exactly like headless; this file turns keyboard/mouse into
+// contract-style inputs (incl. dash and pause) and draws the state with the Ticket-02 palette.
 import * as THREE from 'three';
-import { createGame, step, timeLeft, TICK_RATE, WORLD } from '../core/sim.js';
-import { unlockAudio, toggleMute, sfx } from './audio.js';
+import { createGame, step, timeLeft, ambientIntensity, TICK_RATE, WORLD } from '../core/sim.js';
+import { getNight } from '../core/maps.js';
+import { PALETTE } from './palette.js';
+import { buildWorld } from './world.js';
+import { loadSettings, saveSettings } from './settings.js';
+import { unlockAudio, setVolume, startMusic, sfx } from './audio.js';
 
 const tuning = (await (await fetch('/game.contract.json')).json()).tuning;
+const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
-$('capacity').textContent = tuning.carry_capacity;
-$('r-cap').textContent = tuning.carry_capacity;
-$('r-cost').textContent = tuning.lantern_cost;
-$('r-pulse').textContent = tuning.pulse_cost;
+let settings = loadSettings();
+setVolume(settings.volume);
 
-// ---------- renderer / scene ----------
+// ---------------------------------------------------------------- renderer
 const canvas = $('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
-const NIGHT = new THREE.Color('#0b0614');
-const DUSK = new THREE.Color('#3a2a52');
-scene.background = NIGHT.clone();
-scene.fog = new THREE.FogExp2(NIGHT.clone(), 0.03);
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
-
-const hemi = new THREE.HemisphereLight('#8a7bd1', '#1a1026', 0.5);
-scene.add(hemi);
-const moon = new THREE.DirectionalLight('#b9b4ff', 0.35);
-moon.position.set(-20, 40, -10);
-scene.add(moon);
-
+scene.background = new THREE.Color(PALETTE.sky);
+scene.fog = new THREE.FogExp2(PALETTE.fog, 0.014);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
+const hemi = new THREE.HemisphereLight('#c9d2ff', PALETTE.grass, ambientIntensity(0, 5));
+const moon = new THREE.DirectionalLight('#b9c4ff', 0.45);
+moon.position.set(-30, 60, -20);
+scene.add(hemi, moon);
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
 resize();
 
-// ---------- static world ----------
-const island = new THREE.Mesh(
-  new THREE.CylinderGeometry(WORLD.islandRadius, WORLD.islandRadius - 6, 6, 72),
-  new THREE.MeshStandardMaterial({ color: '#2d4537', roughness: 0.95 }),
-);
-island.position.y = -3;
-scene.add(island);
-const rim = new THREE.Mesh(
-  new THREE.RingGeometry(WORLD.islandRadius - 1.2, WORLD.islandRadius, 72),
-  new THREE.MeshStandardMaterial({ color: '#6b5b45', roughness: 1 }),
-);
-rim.rotation.x = -Math.PI / 2;
-rim.position.y = 0.01;
-scene.add(rim);
+// ---------------------------------------------------------------- story (Ông Đăng)
+const INTRO = {
+  1: { quote: 'Mây à, sương đen đã phủ kín Bến. Gom đom đóm, thắp lại năm ngọn đèn cho dân chài nhé. Nhớ lời ông: Bóng Mực sợ ánh đèn.', tips: ['Shift để lướt, F để tỏa sáng (tốn 3 đom đóm).', 'Mép đảo là biển mây, rơi xuống là mất một Ngọn Lửa.'] },
+  2: { quote: 'Hai hòn Cau nối nhau bằng cây cầu tre không lan can. Bục nhảy vàng sẽ đưa con qua biển mây. Coi chừng Gió Lạc, chúng mê đom đóm lắm.', tips: ['Gió Lạc (dải lụa xám xanh) cướp đom đóm khi con mang từ 5 con trở lên. Tỏa sáng để đòi lại.', 'Bùa Gió đỏ trên cầu giúp con chạy nhanh và lướt liên tục.'] },
+  3: { quote: 'Đảo Chuông có ba tầng. Leo dốc lên tầng giữa, đứng lên bục để tới đỉnh tháp. Gió ở đây mạnh lắm, nghe lá xào xạc là phải đứng vững, con nhé.', tips: ['Bóng Mực ở đây nhanh hơn (4.5 m/s).', 'Mỗi 30 giây có một cơn gió kéo dài 5 giây.'] },
+};
 
-const sea = new THREE.Mesh(
-  new THREE.CircleGeometry(300, 48),
-  new THREE.MeshStandardMaterial({ color: '#2b2047', roughness: 1 }),
-);
-sea.rotation.x = -Math.PI / 2;
-sea.position.y = -6;
-scene.add(sea);
-
-// Deterministic decoration (bushes, rocks, cloud puffs) — cosmetic only.
-let decoSeed = 7;
-const drand = () => ((decoSeed = (decoSeed * 16807) % 2147483647) / 2147483647);
-const bushMat = new THREE.MeshStandardMaterial({ color: '#1f3a2c', roughness: 1 });
-const rockMat = new THREE.MeshStandardMaterial({ color: '#4a4458', roughness: 1 });
-const lanternSpots = createGame({ tuning, seed: 1, scenario: { random_motes: false, random_shades: false } }).lanterns;
-for (let i = 0; i < 60; i++) {
-  const a = drand() * Math.PI * 2;
-  const r = 6 + drand() * (WORLD.islandRadius - 8);
-  const x = r * Math.sin(a);
-  const z = r * Math.cos(a);
-  if (lanternSpots.some((L) => Math.hypot(L.x - x, L.z - z) < 4)) continue;
-  const isRock = drand() < 0.35;
-  const m = isRock
-    ? new THREE.Mesh(new THREE.DodecahedronGeometry(0.4 + drand() * 0.6), rockMat)
-    : new THREE.Mesh(new THREE.ConeGeometry(0.6 + drand() * 0.5, 1.4 + drand() * 1.6, 7), bushMat);
-  m.position.set(x, isRock ? 0.2 : 0.7, z);
-  m.rotation.y = drand() * Math.PI;
-  scene.add(m);
-}
-const cloudMat = new THREE.MeshStandardMaterial({ color: '#5a4a80', roughness: 1, transparent: true, opacity: 0.85 });
-for (let i = 0; i < 40; i++) {
-  const a = drand() * Math.PI * 2;
-  const r = 52 + drand() * 70;
-  const puff = new THREE.Mesh(new THREE.SphereGeometry(3 + drand() * 5, 12, 10), cloudMat);
-  puff.position.set(r * Math.sin(a), -5 + drand() * 2.5, r * Math.cos(a));
-  puff.scale.y = 0.45;
-  scene.add(puff);
-}
-
-// ---------- Mây ----------
+// ---------------------------------------------------------------- Mây
 function buildMay() {
   const g = new THREE.Group();
-  const robe = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.28, 0.5, 1.0, 16),
-    new THREE.MeshStandardMaterial({ color: '#6f8fd8', roughness: 0.8 }),
-  );
+  const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.5, 1.0, 16), new THREE.MeshLambertMaterial({ color: PALETTE.mayRobe }));
   robe.position.y = 0.5;
-  const head = new THREE.Mesh(
-    new THREE.SphereGeometry(0.28, 20, 16),
-    new THREE.MeshStandardMaterial({ color: '#f1d1b5', roughness: 0.7 }),
-  );
-  head.position.y = 1.25;
-  const hat = new THREE.Mesh(
-    new THREE.ConeGeometry(0.78, 0.38, 28, 1, true),
-    new THREE.MeshStandardMaterial({ color: '#e3c98f', roughness: 0.9, side: THREE.DoubleSide }),
-  );
-  hat.position.y = 1.55;
-  const string = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.01, 0.01, 0.35, 4),
-    new THREE.MeshBasicMaterial({ color: '#3a2a1a' }),
-  );
-  string.position.set(0, 1.25, 0.68);
-  const lamp = new THREE.Mesh(
-    new THREE.SphereGeometry(0.13, 14, 12),
-    new THREE.MeshStandardMaterial({ color: '#ffb347', emissive: '#ff9a2e', emissiveIntensity: 2 }),
-  );
+  const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.08, 8, 20), new THREE.MeshLambertMaterial({ color: PALETTE.mayScarf }));
+  scarf.rotation.x = Math.PI / 2;
+  scarf.position.y = 1.02;
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.04), scarf.material);
+  tail.position.set(0.12, 0.85, -0.28);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 16), new THREE.MeshLambertMaterial({ color: '#f1d1b5' }));
+  head.position.y = 1.28;
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(0.78, 0.38, 28, 1, true), new THREE.MeshLambertMaterial({ color: PALETTE.sand, side: THREE.DoubleSide }));
+  hat.position.y = 1.58;
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), new THREE.MeshBasicMaterial({ color: PALETTE.lanternLit }));
   lamp.scale.y = 1.25;
-  lamp.position.set(0, 1.02, 0.68);
-  const light = new THREE.PointLight('#ffb15c', 1.2, 9, 1.6);
+  lamp.position.set(0, 1.05, 0.68);
+  const light = new THREE.PointLight(PALETTE.lanternLit, 1.4, 10, 1.6);
   light.position.copy(lamp.position);
-  g.add(robe, head, hat, string, lamp, light);
-  g.userData = { lamp, light };
+  g.add(robe, scarf, tail, head, hat, lamp, light);
+  g.userData = { light };
   return g;
 }
 const may = buildMay();
 scene.add(may);
-
-// Creativity: carried fireflies orbit Mây (diegetic "carried" counter).
-const orbitMat = new THREE.MeshBasicMaterial({ color: '#fff2a0' });
+// Creativity (Phase 1, kept): carried fireflies orbit Mây.
+const orbitMat = new THREE.MeshBasicMaterial({ color: PALETTE.moteCore });
 const orbiters = Array.from({ length: tuning.carry_capacity }, () => {
   const m = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), orbitMat);
   scene.add(m);
   return m;
 });
 
-// ---------- lanterns ----------
-const safeMat = new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.22, side: THREE.DoubleSide });
-function buildLantern() {
-  const g = new THREE.Group();
-  const wood = new THREE.MeshStandardMaterial({ color: '#4b3426', roughness: 0.9 });
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 3, 10), wood);
-  post.position.y = 1.5;
-  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.9), wood);
-  arm.position.set(0, 3.0, 0);
-  const bodyMat = new THREE.MeshStandardMaterial({ color: '#3a2f4a', emissive: '#ff8c2a', emissiveIntensity: 0, roughness: 0.6 });
-  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 16), bodyMat);
-  body.scale.y = 1.25;
-  body.position.y = 3.6;
-  const light = new THREE.PointLight('#ffa64d', 0, 20, 1.4);
-  light.position.y = 3.6;
-  const safe = new THREE.Mesh(new THREE.RingGeometry(tuning.safe_radius - 0.12, tuning.safe_radius, 72), safeMat);
-  safe.rotation.x = -Math.PI / 2;
-  safe.position.y = 0.03;
-  safe.visible = false;
-  const pips = [];
-  const pipGeo = new THREE.SphereGeometry(0.11, 8, 6);
-  for (let i = 0; i < tuning.lantern_cost; i++) {
-    const a = (i / tuning.lantern_cost) * Math.PI * 2;
-    const pip = new THREE.Mesh(pipGeo, new THREE.MeshBasicMaterial({ color: '#4a3d5c' }));
-    pip.position.set(Math.sin(a) * 0.9, 0.15, Math.cos(a) * 0.9);
-    pips.push(pip);
-    g.add(pip);
-  }
-  g.add(post, arm, body, light, safe);
-  g.userData = { bodyMat, light, safe, pips, glow: 0 };
-  return g;
-}
-
-// ---------- dynamic entities ----------
+// ---------------------------------------------------------------- entity views
 const moteGeo = new THREE.SphereGeometry(0.13, 10, 8);
-const moteMat = new THREE.MeshBasicMaterial({ color: '#fff0a0' });
-const haloGeo = new THREE.SphereGeometry(0.35, 10, 8);
-const haloMat = new THREE.MeshBasicMaterial({ color: '#ffd966', transparent: true, opacity: 0.25, depthWrite: false, blending: THREE.AdditiveBlending });
-function buildMote() {
+const moteCoreMat = new THREE.MeshBasicMaterial({ color: PALETTE.moteCore });
+const haloGeo = new THREE.SphereGeometry(0.34, 10, 8);
+const haloMat = new THREE.MeshBasicMaterial({ color: PALETTE.moteHalo, transparent: true, opacity: 0.3, depthWrite: false, blending: THREE.AdditiveBlending });
+const buildMote = () => {
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(moteGeo, moteMat), new THREE.Mesh(haloGeo, haloMat));
+  g.add(new THREE.Mesh(moteGeo, moteCoreMat), new THREE.Mesh(haloGeo, haloMat));
   return g;
-}
-
+};
 const shadeGeo = new THREE.SphereGeometry(0.75, 20, 16);
+const rimGeo = new THREE.SphereGeometry(0.82, 20, 16);
 const eyeGeo = new THREE.SphereGeometry(0.11, 8, 6);
 function buildShade() {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: '#1b0a29', emissive: '#4b1a7a', emissiveIntensity: 0.35, roughness: 0.4, transparent: true, opacity: 0.92 });
+  const bodyMat = new THREE.MeshLambertMaterial({ color: PALETTE.shadeBody });
   const body = new THREE.Mesh(shadeGeo, bodyMat);
+  const rim = new THREE.Mesh(rimGeo, new THREE.MeshBasicMaterial({ color: PALETTE.shadeRim, side: THREE.BackSide }));
   body.scale.set(1, 1.15, 1);
-  const eyeMat = new THREE.MeshBasicMaterial({ color: '#d79bff' });
+  rim.scale.set(1, 1.15, 1);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: PALETTE.shadeRim });
   const e1 = new THREE.Mesh(eyeGeo, eyeMat);
   const e2 = new THREE.Mesh(eyeGeo, eyeMat);
-  e1.position.set(-0.25, 0.2, 0.62);
-  e2.position.set(0.25, 0.2, 0.62);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 12), bodyMat);
-  tail.rotation.x = Math.PI;
-  tail.position.y = -0.85;
-  g.add(body, e1, e2, tail);
+  e1.position.set(-0.25, 0.2, 0.66);
+  e2.position.set(0.25, 0.2, 0.66);
+  g.add(rim, body, e1, e2);
   g.userData = { bodyMat, eyeMat };
   return g;
 }
-
-const pulseRing = new THREE.Mesh(
-  new THREE.RingGeometry(0.85, 1, 64),
-  new THREE.MeshBasicMaterial({ color: '#ffe2a8', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }),
-);
+const drifterMat = new THREE.MeshLambertMaterial({ color: PALETTE.drifter, side: THREE.DoubleSide, transparent: true, opacity: 0.9, emissive: '#2a3340' });
+function buildDrifter() {
+  const segs = Array.from({ length: 6 }, (_, i) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.9 - i * 0.1, 0.3), drifterMat);
+    scene.add(m);
+    return m;
+  });
+  return { segs, trail: [] };
+}
+function buildCharm() {
+  const g = new THREE.Group();
+  const card = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.04), new THREE.MeshLambertMaterial({ color: PALETTE.charm, emissive: '#3a0008' }));
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.83, 0.03), new THREE.MeshBasicMaterial({ color: PALETTE.gold }));
+  g.add(rim, card);
+  return g;
+}
+const pulseRing = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64), new THREE.MeshBasicMaterial({ color: PALETTE.lanternCore, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
 pulseRing.rotation.x = -Math.PI / 2;
-pulseRing.position.y = 0.1;
 scene.add(pulseRing);
 
-// ---------- game session ----------
+// ---------------------------------------------------------------- session state
+const campaign = { night: 1, total: 0, scores: {} };
 let g = null;
+let mode = 'menu'; // menu | intro | playing | result | dawn
+let screenKind = 'menu';
+let world = null;
 let gamesStarted = 0;
-let mode = 'title'; // title | playing | over
-const lanternViews = new Map();
-const moteViews = new Map();
-const shadeViews = new Map();
+const views = { motes: new Map(), shades: new Map(), drifters: new Map(), charms: new Map() };
 let pulseT = 1;
+let camYaw = 0;
+let lastBeep = null;
+let windWarned = -1;
 
-function clearDynamic() {
-  for (const m of [...lanternViews.values(), ...moteViews.values(), ...shadeViews.values()]) scene.remove(m);
-  lanternViews.clear();
-  moteViews.clear();
-  shadeViews.clear();
-}
-
-// Replay mode: ?scenario=<folder in scenarios/>&seed=N plays the exact headless
-// scenario + inputs file in 3D (keyboard ignored), e.g. for reproducible screenshots.
-const params = new URLSearchParams(location.search);
 let replay = null;
 if (params.has('scenario')) {
   const name = params.get('scenario').replace(/[^\w-]/g, '');
@@ -237,276 +145,468 @@ if (params.has('scenario')) {
     const r = await fetch(`/scenarios/${name}/${f}`);
     return r.ok ? r.json() : null;
   };
-  replay = { scenario: (await get('scenario.json')) || {}, inputs: (await get('inputs.json')) || { frames: [] } };
+  const expect = await get('expect.json');
+  replay = {
+    scenario: (await get('scenario.json')) || {},
+    inputs: (await get('inputs.json')) || { frames: [] },
+    night: Number(params.get('night') || expect?.args?.night || 1),
+    seed: Number(params.get('seed') || expect?.args?.seed || 1),
+  };
 }
 
-function replayInput() {
-  const cur = replay.cur;
-  const frames = replay.inputs.frames;
-  while (replay.fi < frames.length && frames[replay.fi].tick <= g.tick) {
-    const { tick: _t, ...fields } = frames[replay.fi++];
-    Object.assign(cur, fields);
-  }
-  camYaw = cur.cam_yaw_deg || 0;
-  return { ...cur };
+function clearViews() {
+  for (const v of [...views.motes.values(), ...views.shades.values(), ...views.charms.values()]) scene.remove(v);
+  for (const d of views.drifters.values()) d.segs.forEach((s) => scene.remove(s));
+  for (const m of Object.values(views)) m.clear();
 }
 
-function newGame() {
+function startNight(n) {
   gamesStarted++;
-  clearDynamic();
-  const seed = params.has('seed') ? Number(params.get('seed')) : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
-  if (replay) {
-    replay.cur = { move: [0, 0], cam_yaw_deg: 0, jump: false, interact: false, pulse: false };
+  campaign.night = n;
+  clearViews();
+  if (world) scene.remove(world.group);
+  const map = getNight(n);
+  world = buildWorld(map, tuning);
+  scene.add(world.group);
+  const useReplay = replay && replay.night === n;
+  const seed = useReplay ? replay.seed : params.has('seed') ? Number(params.get('seed')) : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+  g = createGame({ tuning, seed, night: n, scenario: useReplay ? replay.scenario : {} });
+  if (useReplay) {
+    replay.cur = { move: [0, 0], cam_yaw_deg: 0 };
     replay.fi = 0;
   }
-  g = createGame({ tuning, seed, scenario: replay ? replay.scenario : {} });
-  for (const L of g.lanterns) {
-    const v = buildLantern();
-    v.position.set(L.x, L.y, L.z);
-    scene.add(v);
-    lanternViews.set(L.id, v);
-  }
   camYaw = 0;
+  const P0 = g.player;
+  camera.position.set(P0.x, P0.y + 5, P0.z - 9); // start right behind Mây (yaw 0 looks along +Z)
+  camera.lookAt(P0.x, P0.y + 1.3, P0.z);
+  camera.updateMatrixWorld();
+  lastBeep = null;
+  windWarned = -1;
   mode = 'playing';
-  $('overlay').hidden = true;
+  hideScreen();
   $('hud').hidden = false;
+  $('nightLabel').textContent = `Đêm ${n} · ${map.name}`;
+  buildMoteBar();
+  startMusic();
 }
 
-// ---------- input ----------
+// ---------------------------------------------------------------- screens
+const screenEl = $('screen');
+const card = $('card');
+let primaryAction = null;
+function hideScreen() {
+  screenEl.hidden = true;
+  primaryAction = null;
+}
+function showScreen(kind, html, actions) {
+  screenKind = kind;
+  card.innerHTML = html;
+  screenEl.hidden = false;
+  primaryAction = actions[0]?.[1] ?? null;
+  const btns = document.createElement('div');
+  btns.className = 'btns';
+  actions.forEach(([label, fn, id], i) => {
+    const b = document.createElement('button');
+    b.className = `btn${i === 0 ? ' primary' : ''}`;
+    b.textContent = label;
+    if (id) b.id = id;
+    b.addEventListener('click', () => {
+      unlockAudio();
+      sfx.ui();
+      fn();
+    });
+    btns.appendChild(b);
+  });
+  card.appendChild(btns);
+}
+
+function showMenu() {
+  mode = 'menu';
+  $('hud').hidden = true;
+  campaign.total = 0;
+  campaign.scores = {};
+  showScreen('menu', `
+    <h1>Đảo Đèn Lồng</h1>
+    <h2>Ba hòn đảo · ba đêm</h2>
+    <p>Sương đen đã nuốt ánh sáng của ba hòn đảo giữa biển mây. Giúp Mây, người giữ đèn nhỏ tuổi, gom đom đóm và thắp lại các Đèn Lồng Lớn trước bình minh.</p>
+    <ul>
+      <li><b>WASD</b> đi · <b>Space</b> nhảy · <b>Shift</b> lướt · <b>E</b> nạp đèn · <b>F</b>/chuột trái tỏa sáng</li>
+      <li>Kéo chuột hoặc <b>←/→</b> xoay camera · <b>Esc</b>/<b>P</b> tạm dừng</li>
+    </ul>
+    <p class="hint">Nhấn Enter để bắt đầu</p>`, [['Bắt đầu', () => showIntro(1), 'btnStart'], ['Cài đặt', () => showSettings(showMenu), 'btnSettings']]);
+}
+
+function showIntro(n) {
+  mode = 'intro';
+  $('hud').hidden = true;
+  const map = getNight(n);
+  showScreen('intro', `
+    <h2>Đêm ${n}</h2>
+    <h1>${map.name}</h1>
+    <p class="quote">“${INTRO[n].quote}”<br><small>Ông Đăng, người giữ đèn già</small></p>
+    <ul>${INTRO[n].tips.map((t) => `<li>${t}</li>`).join('')}</ul>
+    <p class="hint">${map.lanterns.length} Đèn Lồng Lớn · ${tuning[map.durationKey]} giây tới bình minh</p>`, [['Vào Đêm', () => startNight(n), 'btnPlay'], ['Về menu', showMenu]]);
+}
+
+function showPause() {
+  showScreen('pause', '<h1>Tạm dừng</h1><p>Logic game đang dừng hoàn toàn.</p>', [
+    ['Tiếp tục', () => (latched.pause = true), 'btnResume'],
+    ['Chơi lại Đêm', () => startNight(campaign.night), 'btnRestart'],
+    ['Cài đặt', () => showSettings(showPause), 'btnPauseSettings'],
+    ['Về menu', showMenu, 'btnMenu'],
+  ]);
+}
+
+function showSettings(back) {
+  showScreen('settings', `
+    <h1>Cài đặt</h1>
+    <div class="row"><label for="vol">Âm lượng</label><input id="vol" type="range" min="0" max="1" step="0.05" value="${settings.volume}"><span id="volV">${Math.round(settings.volume * 100)}%</span></div>
+    <div class="row"><label for="sens">Độ nhạy chuột</label><input id="sens" type="range" min="0.2" max="3" step="0.1" value="${settings.sensitivity}"><span id="sensV">${settings.sensitivity.toFixed(1)}×</span></div>
+    <p class="hint">Cài đặt được lưu lại cho những lần mở game sau.</p>`, [['Quay lại', back, 'btnBack']]);
+  const save = () => {
+    settings = { volume: Number($('vol').value), sensitivity: Number($('sens').value) };
+    $('volV').textContent = `${Math.round(settings.volume * 100)}%`;
+    $('sensV').textContent = `${settings.sensitivity.toFixed(1)}×`;
+    setVolume(settings.volume);
+    saveSettings(settings);
+  };
+  $('vol').addEventListener('input', save);
+  $('sens').addEventListener('input', save);
+}
+
+const REASONS = {
+  all_lit: 'Mọi Đèn Lồng Lớn đã cháy rực.',
+  dawn: 'Trời sáng trước khi các đèn được thắp hết.',
+  no_flames: 'Ngọn Lửa của Mây đã tắt.',
+};
+function showResult() {
+  mode = 'result';
+  const n = campaign.night;
+  const lit = g.lanterns.filter((L) => L.lit).length;
+  if (g.result === 'won') {
+    campaign.scores[n] = g.score;
+    campaign.total = Object.values(campaign.scores).reduce((a, b) => a + b, 0);
+    if (n === 3) return showDawn();
+    showScreen('result', `
+      <h2>Đêm ${n} · ${getNight(n).name}</h2><h1>Đảo đã sáng!</h1>
+      <p>${REASONS.all_lit} Còn ${Math.floor(timeLeft(g))} giây và ${g.player.flames} Ngọn Lửa.</p>
+      <p>Điểm Đêm này: <span class="big">${g.score}</span><br>Tổng: <b>${campaign.total}</b></p>`, [['Đêm kế tiếp', () => showIntro(n + 1), 'btnNext'], ['Về menu', showMenu]]);
+  } else {
+    showScreen('result', `
+      <h2>Đêm ${n} · ${getNight(n).name}</h2><h1>Chưa thành…</h1>
+      <p>${REASONS[g.reason] || ''} Đã thắp ${lit}/${g.lanterns.length} đèn.</p>
+      <p class="quote">“Không sao đâu Mây, mình thử lại nhé.” Ông Đăng</p>`, [['Chơi lại Đêm', () => startNight(n), 'btnRetry'], ['Về menu', showMenu]]);
+  }
+}
+function showDawn() {
+  mode = 'dawn';
+  $('hud').hidden = true;
+  showScreen('dawn', `
+    <h2>Bình Minh</h2><h1>Ba hòn đảo đã sáng trở lại</h1>
+    <p class="quote">“Con làm được rồi, Mây. Nghe tiếng chuông kìa: biển mây đang hồng lên.” Ông Đăng</p>
+    <p>Đêm 1: ${campaign.scores[1] ?? 0} · Đêm 2: ${campaign.scores[2] ?? 0} · Đêm 3: ${campaign.scores[3] ?? 0}</p>
+    <p>Tổng điểm: <span class="big" id="dawnTotal">${campaign.total}</span></p>`, [['Về menu', showMenu, 'btnMenu']]);
+}
+
+// ---------------------------------------------------------------- input
 const held = new Set();
-const latched = { jump: false, interact: false, pulse: false };
-let camYaw = 0; // degrees, same meaning as cam_yaw_deg in the contract
+const latched = { jump: false, interact: false, pulse: false, dash: false, pause: false };
+const KEY_ACTION = { Space: 'jump', KeyE: 'interact', KeyF: 'pulse', ShiftLeft: 'dash', ShiftRight: 'dash', Escape: 'pause', KeyP: 'pause' };
 let dragging = false;
 let lastX = 0;
-const KEY_ACTION = { Space: 'jump', KeyE: 'interact', KeyF: 'pulse' };
 
 window.addEventListener('keydown', (e) => {
   unlockAudio();
   if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
   if (e.repeat) return;
   held.add(e.code);
+  if (e.code === 'Enter' && !screenEl.hidden && primaryAction && screenKind !== 'settings') {
+    sfx.ui();
+    primaryAction();
+    return;
+  }
+  if (mode !== 'playing') return;
+  if ((e.code === 'Escape' || e.code === 'KeyP') && !screenEl.hidden && screenKind === 'settings') return showPause();
   if (KEY_ACTION[e.code]) latched[KEY_ACTION[e.code]] = true;
-  if (e.code === 'KeyM') toggleMute();
-  if ((e.code === 'Enter' || e.code === 'KeyR') && mode !== 'playing') newGame();
 });
 window.addEventListener('keyup', (e) => held.delete(e.code));
-window.addEventListener('blur', () => held.clear());
+window.addEventListener('blur', () => {
+  held.clear();
+  if (mode === 'playing' && g && !g.paused) latched.pause = true; // auto-pause when the window loses focus
+});
 canvas.addEventListener('pointerdown', (e) => {
   unlockAudio();
   dragging = true;
   lastX = e.clientX;
-  if (e.button === 0 && mode === 'playing') latched.pulse = true;
+  if (e.button === 0 && mode === 'playing' && !g.paused) latched.pulse = true;
 });
 window.addEventListener('pointerup', () => (dragging = false));
 window.addEventListener('pointermove', (e) => {
   if (!dragging) return;
-  camYaw -= (e.clientX - lastX) * 0.3;
+  camYaw -= (e.clientX - lastX) * 0.25 * settings.sensitivity;
   lastX = e.clientX;
-});
-$('overlay').addEventListener('click', () => {
-  unlockAudio();
-  if (mode !== 'playing') newGame();
 });
 
 function currentInput() {
   const k = (c) => (held.has(c) ? 1 : 0);
-  // Screen-right is world -X at yaw 0 for a camera looking down +Z, so D maps to move x = -1.
-  const x = k('KeyA') - k('KeyD');
-  const z = k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown');
   const input = {
-    move: [x, z],
+    // Screen-right is world -X at yaw 0 for a camera looking down +Z, so D maps to move x = -1.
+    move: [k('KeyA') - k('KeyD'), k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown')],
     cam_yaw_deg: camYaw,
     jump: held.has('Space') || latched.jump,
     interact: held.has('KeyE') || latched.interact,
     pulse: held.has('KeyF') || latched.pulse,
+    dash: held.has('ShiftLeft') || held.has('ShiftRight') || latched.dash,
+    pause: latched.pause,
   };
-  latched.jump = latched.interact = latched.pulse = false;
+  for (const key of Object.keys(latched)) latched[key] = false;
+  return input;
+}
+function replayInput() {
+  const frames = replay.inputs.frames;
+  while (replay.fi < frames.length && frames[replay.fi].tick <= g.tick) {
+    const { tick: _t, ...fields } = frames[replay.fi++];
+    Object.assign(replay.cur, fields);
+  }
+  camYaw = replay.cur.cam_yaw_deg || 0;
+  const input = { ...replay.cur, pause: replay.cur.pause || latched.pause };
+  latched.pause = false;
   return input;
 }
 
-// ---------- events -> feedback ----------
+// ---------------------------------------------------------------- events -> feedback
 function onEvents(events) {
   for (const e of events) {
     switch (e.name) {
-      case 'mote_picked':
-        sfx.pickup(e.data.carried);
-        break;
-      case 'deposit':
-        sfx.deposit();
-        break;
-      case 'lantern_lit':
-        sfx.lanternLit();
-        lanternViews.get(e.data.lantern_id).userData.glow = 0.01;
-        break;
-      case 'pulse':
-        sfx.pulse();
-        pulseT = 0;
-        break;
-      case 'player_hit':
-        sfx.hit();
-        flashPanel();
-        break;
-      case 'shade_spawned':
-        sfx.shadeSpawn();
-        break;
-      case 'game_over':
-        showGameOver(e.data);
-        break;
+      case 'mote_picked': sfx.pickup(e.data.carried); break;
+      case 'deposit': sfx.deposit(); break;
+      case 'lantern_lit': sfx.lanternLit(); world.lanternViews.get(e.data.lantern_id).userData.glow = 0.01; break;
+      case 'pulse': sfx.pulse(); pulseT = 0; break;
+      case 'player_hit': sfx.hit(); flashFlames(); break;
+      case 'shade_spawned': sfx.shadeSpawn(); break;
+      case 'dash': sfx.dash(); break;
+      case 'charm_picked': sfx.charm(); break;
+      case 'drifter_steal': sfx.steal(); break;
+      case 'drifter_drop': sfx.charm(); break;
+      case 'paused': showPause(); break;
+      case 'resumed': hideScreen(); break;
+      case 'game_over': (g.result === 'won' ? sfx.win : sfx.lose)(); setTimeout(showResult, 600); mode = 'ending'; break;
       default:
     }
   }
 }
-
-function flashPanel() {
-  const p = $('flames').parentElement;
-  p.classList.remove('flash');
-  void p.offsetWidth;
-  p.classList.add('flash');
+function flashFlames() {
+  const p = $('flames');
+  p.animate([{ background: 'rgba(255,90,95,.7)' }, { background: 'rgba(14,20,48,.72)' }], { duration: 400 });
 }
 
-function showGameOver({ result, reason }) {
-  mode = 'over';
-  (result === 'won' ? sfx.win : sfx.lose)();
-  const titles = { all_lit: 'Đảo đã sáng trở lại!', dawn: 'Bình minh đã đến…', no_flames: 'Ngọn lửa của Mây đã tắt…' };
-  const texts = {
-    all_lit: 'Cả 5 Đèn Lồng Lớn đã cháy rực. Sương đen tan dần trên Đảo Bến.',
-    dawn: 'Trời sáng trước khi các đèn được thắp hết. Sương đen vẫn còn bám trên đảo.',
-    no_flames: 'Bóng Mực đã chạm vào Mây quá nhiều lần.',
-  };
-  $('ov-title').textContent = titles[reason] || 'Kết thúc';
-  $('ov-text').textContent = `${texts[reason] || ''} Điểm: ${g.score}.`;
-  $('ov-rules').hidden = true;
-  $('ov-cta').innerHTML = 'Nhấn <b>Enter</b> hoặc <b>R</b> để chơi lại';
-  $('overlay').hidden = false;
+// ---------------------------------------------------------------- HUD
+function buildMoteBar() {
+  const bar = $('moteBar');
+  bar.innerHTML = '';
+  for (let i = 0; i < tuning.carry_capacity; i++) bar.appendChild(document.createElement('div')).className = 'mote-cell';
 }
-
-// ---------- HUD ----------
+const v3 = new THREE.Vector3();
 function updateHud() {
   const P = g.player;
   const fl = $('flames');
-  if (fl.childElementCount !== Math.max(tuning.flames, P.flames)) {
+  const nFl = Math.max(tuning.flames, P.flames);
+  if (fl.childElementCount !== nFl) {
     fl.innerHTML = '';
-    for (let i = 0; i < Math.max(tuning.flames, P.flames); i++) fl.appendChild(document.createElement('div')).className = 'flame';
+    for (let i = 0; i < nFl; i++) fl.appendChild(document.createElement('div')).className = 'flame';
   }
   [...fl.children].forEach((c, i) => c.classList.toggle('out', i >= P.flames));
-  $('carried').textContent = P.carried;
-  $('lit').textContent = g.lanterns.filter((L) => L.lit).length;
-  const t = Math.ceil(timeLeft(g));
-  $('time').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  const tl = timeLeft(g);
+  const t = Math.ceil(tl - 1e-9);
+  $('clock').textContent = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  $('clock').classList.toggle('danger', tl <= 30);
+  const lit = g.lanterns.filter((L) => L.lit).length;
+  $('lamps').textContent = `${lit}/${g.lanterns.length}`;
   $('score').textContent = g.score;
+  [...$('moteBar').children].forEach((c, i) => c.classList.toggle('on', i < P.carried));
+  const setCd = (id, frac) => {
+    const el = $(id);
+    el.querySelector('.cd-fill').style.setProperty('--p', `${Math.round(frac * 100)}%`);
+    el.classList.toggle('ready', frac <= 0);
+  };
+  setCd('cdDash', P.charm > 0 ? 0 : P.dashCd / Math.round(tuning.dash_cooldown_s * TICK_RATE));
+  const pulseFrac = P.pulseCd / Math.round(tuning.pulse_cooldown_s * TICK_RATE);
+  setCd('cdPulse', P.carried < tuning.pulse_cost ? Math.max(pulseFrac, 0.999) : pulseFrac);
+  $('charmInd').hidden = P.charm <= 0;
+  $('charmS').textContent = Math.ceil(P.charm / TICK_RATE);
 
-  let hint = '';
-  const near = g.lanterns
-    .filter((L) => !L.lit && Math.hypot(L.x - P.x, L.z - P.z) <= tuning.interact_radius)
-    .sort((a, b) => Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z))[0];
-  if (near) hint = P.carried > 0 ? `Nhấn E để nạp ánh sáng vào ${near.id} (${near.deposited}/${tuning.lantern_cost})` : `${near.id} cần ${tuning.lantern_cost - near.deposited} đom đóm nữa`;
-  else if (P.carried >= tuning.carry_capacity) hint = 'Túi đầy! Mang đom đóm về một Đèn Lồng Lớn';
-  else if (g.shades.some((s) => s.stun === 0 && Math.hypot(s.x - P.x, s.z - P.z) < tuning.pulse_radius)) {
-    hint = P.carried >= tuning.pulse_cost ? 'Bóng Mực ở gần! Nhấn F để tỏa sáng' : 'Bóng Mực ở gần! Chạy về vòng sáng của đèn đã thắp';
+  const unlit = g.lanterns.filter((L) => !L.lit).sort((a, b) => Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z));
+  const near = unlit.find((L) => Math.hypot(L.x - P.x, L.z - P.z) <= tuning.interact_radius);
+  $('prompt').hidden = !near;
+  if (near) $('prompt').innerHTML = `<kbd>E</kbd> — Nạp ánh sáng (${near.deposited}/${tuning.lantern_cost})`;
+
+  // arrow to the nearest unlit lantern when it is off-screen
+  const target = unlit[0];
+  const arrow = $('arrow');
+  if (!target) arrow.hidden = true;
+  else {
+    v3.set(target.x, target.y + 3.6, target.z).applyMatrix4(camera.matrixWorldInverse);
+    const behind = v3.z > 0;
+    v3.applyMatrix4(camera.projectionMatrix);
+    let { x, y } = v3;
+    if (behind) {
+      x = -x;
+      y = -y;
+    }
+    const onScreen = !behind && Math.abs(x) < 0.95 && Math.abs(y) < 0.9;
+    arrow.hidden = onScreen;
+    if (!onScreen) {
+      const m = Math.max(Math.abs(x) / 0.9, Math.abs(y) / 0.8, 1e-6);
+      const ex = x / m;
+      const ey = y / m;
+      arrow.style.left = `${((ex + 1) / 2) * window.innerWidth}px`;
+      arrow.style.top = `${((1 - ey) / 2) * window.innerHeight}px`;
+      arrow.style.transform = `rotate(${Math.atan2(-ey, ex)}rad)`;
+    }
   }
-  $('hint').textContent = hint;
+
+  // wind warning (2 s before each gust) and leaves
+  if (g.windEnabled) {
+    const phase = g.simTick % WORLD.windEvery;
+    const warn = phase >= WORLD.windEvery - 2 * TICK_RATE;
+    $('windWarn').hidden = !warn;
+    const cycle = Math.floor(g.simTick / WORLD.windEvery);
+    if (warn && windWarned !== cycle) {
+      windWarned = cycle;
+      sfx.windWarn();
+    }
+    if ((warn || g.wind.ticks > 0) && Math.random() < 0.25) spawnLeaf(g.wind.ticks > 0 ? g.wind.dir : 0);
+  } else $('windWarn').hidden = true;
+
+  if (tl <= 10 && t > 0 && t !== lastBeep) {
+    lastBeep = t;
+    sfx.countdown(t <= 3);
+  }
+}
+function spawnLeaf(dirDeg) {
+  const leaf = document.createElement('div');
+  leaf.className = 'leaf';
+  leaf.textContent = '🍃';
+  leaf.style.left = `${Math.random() * 100}%`;
+  leaf.style.top = `${Math.random() * 100}%`;
+  const a = ((dirDeg - camYaw) * Math.PI) / 180;
+  leaf.style.setProperty('--dx', `${Math.cos(a) * 300}px`);
+  leaf.style.setProperty('--dy', `${-Math.sin(a) * 120 - 40}px`);
+  leaf.style.animationDuration = `${1.2 + Math.random()}s`;
+  $('leaves').appendChild(leaf);
+  setTimeout(() => leaf.remove(), 2400);
 }
 
-// ---------- sync visuals ----------
-const tmpColor = new THREE.Color();
-function syncScene(time, dt) {
+// ---------------------------------------------------------------- sync visuals
+function sync(time, dt) {
   const P = g.player;
   const lit = g.lanterns.filter((L) => L.lit).length;
-  const k = lit / g.lanterns.length;
+  hemi.intensity = ambientIntensity(lit, g.lanterns.length);
+  scene.fog.density = 0.014 - 0.006 * (lit / g.lanterns.length);
 
-  // the island brightens as lanterns are lit
-  tmpColor.copy(NIGHT).lerp(DUSK, k);
-  scene.background.copy(tmpColor);
-  scene.fog.color.copy(tmpColor);
-  scene.fog.density = 0.03 - 0.018 * k;
-  hemi.intensity = 0.5 + 0.9 * k;
-
+  may.visible = !P.fallen && !(P.invuln > 0 && Math.floor(time * 12) % 2 === 0);
   may.position.set(P.x, P.y, P.z);
   may.rotation.y = P.facing;
-  may.visible = !(P.invuln > 0 && Math.floor(time * 12) % 2 === 0);
-  may.userData.light.intensity = 0.8 + 0.25 * P.carried;
+  may.userData.light.intensity = 1 + 0.2 * P.carried;
   orbiters.forEach((o, i) => {
-    o.visible = i < P.carried;
+    o.visible = may.visible && i < P.carried;
     const a = time * 2.2 + (i / Math.max(1, P.carried)) * Math.PI * 2;
     o.position.set(P.x + Math.sin(a) * 0.85, P.y + 1.0 + Math.sin(time * 3 + i) * 0.12, P.z + Math.cos(a) * 0.85);
   });
 
   for (const L of g.lanterns) {
-    const v = lanternViews.get(L.id);
-    const u = v.userData;
+    const u = world.lanternViews.get(L.id).userData;
     if (L.lit) u.glow = Math.min(1, u.glow + dt * 1.5);
-    u.bodyMat.emissiveIntensity = u.glow * 2.2 + (L.lit ? Math.sin(time * 2 + v.position.x) * 0.15 : 0);
-    u.bodyMat.color.set(L.lit ? '#ffcf8a' : '#3a2f4a');
+    u.bodyMat.color.set(L.lit ? PALETTE.lanternLit : PALETTE.lanternOff);
+    u.bodyMat.emissiveIntensity = u.glow * 0.9;
+    u.coreMat.opacity = u.glow;
     u.light.intensity = u.glow * 3;
     u.safe.visible = L.lit;
-    u.pips.forEach((pip, i) => pip.material.color.set(i < L.deposited ? '#ffcf5a' : '#4a3d5c'));
+    u.pips.forEach((pip, i) => pip.material.color.set(i < L.deposited ? PALETTE.moteHalo : PALETTE.lanternOff));
   }
 
-  const seenM = new Set();
-  for (const m of g.motes) {
-    seenM.add(m.id);
-    let v = moteViews.get(m.id);
-    if (!v) {
-      v = buildMote();
-      scene.add(v);
-      moteViews.set(m.id, v);
-    }
+  syncSet(views.motes, g.motes, buildMote, (v, m) => {
     const ph = Number(m.id.slice(1)) * 1.7;
-    v.position.set(m.x + Math.sin(time + ph) * 0.15, 0.9 + Math.sin(time * 2.5 + ph) * 0.2, m.z + Math.cos(time * 0.8 + ph) * 0.15);
-  }
-  for (const [id, v] of moteViews) if (!seenM.has(id)) {
-    scene.remove(v);
-    moteViews.delete(id);
-  }
-
-  const seenS = new Set();
-  for (const s of g.shades) {
-    seenS.add(s.id);
-    let v = shadeViews.get(s.id);
-    if (!v) {
-      v = buildShade();
-      scene.add(v);
-      shadeViews.set(s.id, v);
-    }
-    const stunned = s.stun > 0;
-    v.position.set(s.x, WORLD.shadeY + Math.sin(time * 3 + s.x) * 0.12, s.z);
+    v.position.set(m.x, m.y + 0.8 + Math.sin(time * 2.5 + ph) * 0.18, m.z);
+    v.visible = !(m.kind === 'dropped' && m.ttl < 120 && Math.floor(time * 8) % 2 === 0);
+  });
+  syncSet(views.shades, g.shades, buildShade, (v, s) => {
+    const stunned = s.state === 'stunned';
+    v.position.set(s.x, s.y + Math.sin(time * 3 + s.x) * 0.1, s.z);
     v.rotation.y = Math.atan2(P.x - s.x, P.z - s.z);
-    v.userData.eyeMat.color.set(stunned ? '#ffffff' : '#d79bff');
-    v.userData.bodyMat.emissive.set(stunned ? '#8f7bb8' : '#4b1a7a');
+    v.userData.bodyMat.color.set(stunned ? PALETTE.shadeStunned : PALETTE.shadeBody);
+    v.userData.eyeMat.color.set(stunned ? PALETTE.uiText : PALETTE.shadeRim);
+    const sc = s.state === 'spawning' ? 0.4 : 1;
     const wob = stunned ? 1 + Math.sin(time * 18) * 0.06 : 1;
-    v.scale.set(wob, 1 / wob, wob);
+    v.scale.set(sc * wob, sc / wob, sc * wob);
+  });
+  for (const d of g.drifters) {
+    let v = views.drifters.get(d.id);
+    if (!v) views.drifters.set(d.id, (v = buildDrifter()));
+    v.trail.unshift([d.x, d.y, d.z]);
+    v.trail.length = Math.min(v.trail.length, 18);
+    v.segs.forEach((s, i) => {
+      const p = v.trail[Math.min(i * 3, v.trail.length - 1)];
+      s.visible = d.state !== 'removed';
+      s.position.set(p[0], p[1] + Math.sin(time * 6 + i) * 0.12, p[2]);
+      s.rotation.set(Math.sin(time * 4 + i) * 0.6, time * 2 + i * 0.4, 0);
+    });
   }
-  for (const [id, v] of shadeViews) if (!seenS.has(id)) {
-    scene.remove(v);
-    shadeViews.delete(id);
-  }
+  syncSet(views.charms, g.charms, buildCharm, (v, c) => {
+    v.visible = c.available;
+    v.position.set(c.x, c.y + 1 + Math.sin(time * 2) * 0.15, c.z);
+    v.rotation.y = time * 1.5;
+  });
 
   pulseT = Math.min(1, pulseT + dt / 0.4);
   const r = Math.max(0.01, pulseT * tuning.pulse_radius);
   pulseRing.scale.set(r, r, r);
-  pulseRing.position.set(P.x, 0.1, P.z);
-  pulseRing.material.opacity = (1 - pulseT) * 0.8;
+  pulseRing.position.set(P.x, P.y + 0.1, P.z);
+  pulseRing.material.opacity = (1 - pulseT) * 0.85;
 
-  // third-person camera behind Mây, looking along the camera yaw
   const th = (camYaw * Math.PI) / 180;
-  const target = new THREE.Vector3(P.x - Math.sin(th) * 9, P.y + 5, P.z - Math.cos(th) * 9);
+  const target = new THREE.Vector3(P.x - Math.sin(th) * 9, Math.max(P.y, -2) + 5, P.z - Math.cos(th) * 9);
   camera.position.lerp(target, Math.min(1, dt * 6));
-  camera.lookAt(P.x, P.y + 1.3, P.z);
+  camera.lookAt(P.x, Math.max(P.y, -2) + 1.3, P.z);
+  camera.updateMatrixWorld();
+}
+function syncSet(map, items, build, update) {
+  const seen = new Set();
+  for (const it of items) {
+    seen.add(it.id);
+    let v = map.get(it.id);
+    if (!v) {
+      v = build();
+      scene.add(v);
+      map.set(it.id, v);
+    }
+    update(v, it);
+  }
+  for (const [id, v] of map) {
+    if (!seen.has(id)) {
+      scene.remove(v);
+      map.delete(id);
+    }
+  }
 }
 
-// ---------- main loop (fixed 60 Hz simulation, render every frame) ----------
-// Replay only: ?speed=N advances N ticks per rendered frame (fast-forward for screenshots).
+// ---------------------------------------------------------------- main loop
 const fastTicks = replay && params.has('speed') ? Math.max(1, Number(params.get('speed')) | 0) : 0;
 let last = performance.now();
 let acc = 0;
+const fpsWin = [];
+let fps = 0;
 function frame(now) {
   let dt = Math.min(0.25, (now - last) / 1000);
   last = now;
+  fpsWin.push(now);
+  while (fpsWin.length && fpsWin[0] < now - 1000) fpsWin.shift();
+  fps = fpsWin.length;
   const time = now / 1000;
   const turn = (held.has('ArrowLeft') ? 1 : 0) - (held.has('ArrowRight') ? 1 : 0);
-  camYaw += turn * 120 * dt;
+  if (mode === 'playing' && g && !g.paused) camYaw += turn * 120 * dt * settings.sensitivity;
 
-  if (g) {
+  if (g && (mode === 'playing' || mode === 'ending')) {
     if (mode === 'playing') {
       let budget;
       if (fastTicks) {
@@ -518,24 +618,45 @@ function frame(now) {
         acc -= budget / TICK_RATE;
       }
       for (let i = 0; i < budget && mode === 'playing'; i++) {
-        onEvents(step(g, replay ? replayInput() : currentInput()));
-        if (replay && params.has('until') && g.tick >= Number(params.get('until'))) mode = 'paused';
+        const jumpedBefore = g.player.jumpedAt;
+        onEvents(step(g, replay && replay.night === campaign.night ? replayInput() : currentInput()));
+        if (g.player.jumpedAt !== jumpedBefore) sfx.jump();
+        if (replay && params.has('until') && g.tick >= Number(params.get('until'))) mode = 'frozen';
       }
-      updateHud();
     }
-    syncScene(time, dt);
+    sync(time, dt); // camera first, so the HUD arrow projects with this frame's camera
+    updateHud();
+  } else if (g && mode === 'frozen') {
+    sync(time, dt);
+    updateHud();
   } else {
-    // title screen: slow orbit over the dark island
-    camera.position.set(Math.sin(time * 0.1) * 55, 26, Math.cos(time * 0.1) * 55);
+    camera.position.set(Math.sin(time * 0.1) * 60, 30, Math.cos(time * 0.1) * 60);
     camera.lookAt(0, 0, 0);
   }
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
+
+// boot: menu by default; ?scenario=… replays a headless scenario; ?night=N&autostart jumps to a night
+if (!world) {
+  world = buildWorld(getNight(1), tuning);
+  scene.add(world.group);
+}
+if (replay) startNight(replay.night);
+else if (params.has('autostart')) startNight(Number(params.get('night') || 1));
+else showMenu();
 requestAnimationFrame(frame);
 
-// ?autostart (or replay mode) skips the title card.
-if (params.has('autostart') || replay) newGame();
-
-// Small debug hook (used for screenshots / manual checks in the console).
-window.__ddl = { get game() { return g; }, get mode() { return mode; }, get gamesStarted() { return gamesStarted; }, newGame };
+window.__ddl = {
+  get game() { return g; },
+  get mode() { return mode; },
+  get screen() { return screenEl.hidden ? null : screenKind; },
+  get campaign() { return campaign; },
+  get gamesStarted() { return gamesStarted; },
+  get fps() { return fps; },
+  get ambient() { return hemi.intensity; },
+  get settings() { return settings; },
+  startNight,
+  showIntro,
+  setCamYaw: (deg) => (camYaw = deg), // test hook (deterministic camera for the HUD arrow check)
+};

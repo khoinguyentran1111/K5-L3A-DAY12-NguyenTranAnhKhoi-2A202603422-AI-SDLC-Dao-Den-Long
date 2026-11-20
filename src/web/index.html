@@ -14,45 +14,28 @@
   <canvas id="view"></canvas>
 
   <div id="hud" hidden>
-    <div class="row top">
-      <div class="panel">
-        <div class="label">Lửa của Mây</div>
-        <div id="flames" class="flames"></div>
-      </div>
-      <div class="panel">
-        <div class="label">Đom đóm mang theo</div>
-        <div class="big"><span id="carried">0</span><small> / <span id="capacity">0</span></small></div>
-      </div>
-      <div class="panel">
-        <div class="label">Đèn Lồng Lớn</div>
-        <div class="big"><span id="lit">0</span><small> / 5</small></div>
-      </div>
-      <div class="panel">
-        <div class="label">Còn tới bình minh</div>
-        <div class="big" id="time">5:00</div>
-      </div>
-      <div class="panel">
-        <div class="label">Điểm</div>
-        <div class="big" id="score">0</div>
-      </div>
+    <div class="hud-tl"><div id="flames" class="flames" aria-label="Ngọn Lửa"></div></div>
+    <div class="hud-tc"><div id="clock" class="clock">5:00</div><div id="nightLabel" class="night-label"></div></div>
+    <div class="hud-tr">
+      <div class="stat"><span class="lbl">Đèn</span> <span id="lamps">0/5</span></div>
+      <div class="stat score"><span class="lbl">Điểm</span> <span id="score">0</span></div>
     </div>
-    <div id="hint" class="hint"></div>
-    <div class="keys">WASD đi · Space nhảy · E nạp đèn · F / chuột trái tỏa sáng · ←/→ hoặc kéo chuột xoay camera · M tắt tiếng</div>
+    <div class="hud-bc">
+      <div id="prompt" class="prompt" hidden></div>
+      <div id="moteBar" class="mote-bar" aria-label="Đom đóm đang mang"></div>
+    </div>
+    <div class="hud-br">
+      <div class="cd" id="cdDash"><div class="cd-fill"></div><span>Lướt</span><kbd>Shift</kbd></div>
+      <div class="cd" id="cdPulse"><div class="cd-fill"></div><span>Tỏa Sáng</span><kbd>F</kbd></div>
+      <div class="charm-ind" id="charmInd" hidden>Bùa Gió <b id="charmS">10</b>s</div>
+    </div>
+    <div id="arrow" class="arrow" hidden>➤</div>
+    <div id="windWarn" class="wind-warn" hidden>🍃 Gió sắp nổi!</div>
+    <div id="leaves" class="leaves"></div>
   </div>
 
-  <div id="overlay" class="overlay">
-    <div class="card">
-      <h1 id="ov-title">Đảo Đèn Lồng</h1>
-      <p id="ov-text">Đêm 1 – Đảo Bến. Sương đen đã nuốt hết ánh sáng. Hãy giúp Mây gom đom đóm và thắp lại 5 Đèn Lồng Lớn trước bình minh.</p>
-      <ul id="ov-rules" class="rules">
-        <li>Đi gần đom đóm để nhặt (mang tối đa <b id="r-cap"></b>).</li>
-        <li>Đứng cạnh Đèn Lồng Lớn, nhấn <b>E</b> để nạp ánh sáng. Mỗi đèn cần <b id="r-cost"></b> đom đóm.</li>
-        <li><b>Bóng Mực</b> (tím đen) đuổi theo bạn, chạm vào thì mất một ngọn lửa. Hết lửa là thua.</li>
-        <li>Nhấn <b>F</b> để tỏa sáng (tốn <b id="r-pulse"></b> đom đóm), làm choáng và đẩy lùi Bóng Mực ở gần.</li>
-        <li>Bóng Mực sợ đèn: chúng không vào được vòng sáng quanh đèn đã thắp.</li>
-      </ul>
-      <p class="cta" id="ov-cta">Nhấn <b>Enter</b> để bắt đầu</p>
-    </div>
+  <div id="screen" class="screen">
+    <div class="card" id="card"></div>
   </div>
 
   <script type="module" src="/src/web/main.js"></script>
