@@ -565,11 +565,30 @@ function sync(time, dt) {
   pulseRing.material.opacity = (1 - pulseT) * 0.85;
 
   const th = (camYaw * Math.PI) / 180;
-  const target = new THREE.Vector3(P.x - Math.sin(th) * 9, Math.max(P.y, -2) + 5, P.z - Math.cos(th) * 9);
+  const camDist = cameraDistance(P, th);
+  const target = new THREE.Vector3(P.x - Math.sin(th) * camDist, Math.max(P.y, -2) + 5, P.z - Math.cos(th) * camDist);
   camera.position.lerp(target, Math.min(1, dt * 6));
   camera.lookAt(P.x, Math.max(P.y, -2) + 1.3, P.z);
   camera.updateMatrixWorld();
 }
+// Camera collision: pull the camera in while the bell tower would sit between it and Mây.
+function cameraDistance(P, th) {
+  const camY = Math.max(P.y, -2) + 5;
+  for (let d = 9; d > 2; d -= 0.5) {
+    const cx = P.x - Math.sin(th) * d;
+    const cz = P.z - Math.cos(th) * d;
+    const blocked = g.map.obstacles.some((o) => camY < o.top + 2 && segmentPointDist(P.x, P.z, cx, cz, o.x, o.z) < o.r + 0.8);
+    if (!blocked) return d;
+  }
+  return 2;
+}
+function segmentPointDist(ax, az, bx, bz, px, pz) {
+  const vx = bx - ax;
+  const vz = bz - az;
+  const t = Math.max(0, Math.min(1, ((px - ax) * vx + (pz - az) * vz) / (vx * vx + vz * vz || 1)));
+  return Math.hypot(ax + t * vx - px, az + t * vz - pz);
+}
+
 function syncSet(map, items, build, update) {
   const seen = new Set();
   for (const it of items) {
