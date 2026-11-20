@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đảo Đèn Lồng</title>
+  <link rel="stylesheet" href="/src/web/style.css">
+  <script type="importmap">
+    { "imports": { "three": "/node_modules/three/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <div id="hud" hidden>
+    <div class="row top">
+      <div class="panel">
+        <div class="label">Lửa của Mây</div>
+        <div id="flames" class="flames"></div>
+      </div>
+      <div class="panel">
+        <div class="label">Đom đóm mang theo</div>
+        <div class="big"><span id="carried">0</span><small> / <span id="capacity">0</span></small></div>
+      </div>
+      <div class="panel">
+        <div class="label">Đèn Lồng Lớn</div>
+        <div class="big"><span id="lit">0</span><small> / 5</small></div>
+      </div>
+      <div class="panel">
+        <div class="label">Còn tới bình minh</div>
+        <div class="big" id="time">5:00</div>
+      </div>
+      <div class="panel">
+        <div class="label">Điểm</div>
+        <div class="big" id="score">0</div>
+      </div>
+    </div>
+    <div id="hint" class="hint"></div>
+    <div class="keys">WASD đi · Space nhảy · E nạp đèn · F / chuột trái tỏa sáng · ←/→ hoặc kéo chuột xoay camera · M tắt tiếng</div>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <div class="card">
+      <h1 id="ov-title">Đảo Đèn Lồng</h1>
+      <p id="ov-text">Đêm 1 – Đảo Bến. Sương đen đã nuốt hết ánh sáng. Hãy giúp Mây gom đom đóm và thắp lại 5 Đèn Lồng Lớn trước bình minh.</p>
+      <ul id="ov-rules" class="rules">
+        <li>Đi gần đom đóm để nhặt (mang tối đa <b id="r-cap"></b>).</li>
+        <li>Đứng cạnh Đèn Lồng Lớn, nhấn <b>E</b> để nạp ánh sáng. Mỗi đèn cần <b id="r-cost"></b> đom đóm.</li>
+        <li><b>Bóng Mực</b> (tím đen) đuổi theo bạn, chạm vào thì mất một ngọn lửa. Hết lửa là thua.</li>
+        <li>Nhấn <b>F</b> để tỏa sáng (tốn <b id="r-pulse"></b> đom đóm), làm choáng và đẩy lùi Bóng Mực ở gần.</li>
+        <li>Bóng Mực sợ đèn: chúng không vào được vòng sáng quanh đèn đã thắp.</li>
+      </ul>
+      <p class="cta" id="ov-cta">Nhấn <b>Enter</b> để bắt đầu</p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/web/main.js"></script>
+</body>
+</html>
