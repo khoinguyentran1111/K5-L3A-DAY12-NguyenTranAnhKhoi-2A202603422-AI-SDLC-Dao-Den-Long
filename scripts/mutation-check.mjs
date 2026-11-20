@@ -33,10 +33,12 @@ try {
       continue;
     }
     fs.writeFileSync(FILE, original.replace(from, to));
-    const r = spawnSync(process.execPath, ['--test'], { cwd: ROOT, encoding: 'utf8' });
-    const fail = Number((r.stdout.match(/ℹ fail (\d+)/) || [])[1] || 0);
-    console.log(`${fail > 0 ? 'KILLED  ' : 'SURVIVED'} ${name} (${fail} failing tests)`);
-    if (fail === 0) survived++;
+    // Decide by exit status (portable across Node versions/reporters); TAP gives the count.
+    const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap'], { cwd: ROOT, encoding: 'utf8' });
+    const fail = Number((r.stdout.match(/^# fail (\d+)/m) || [])[1] || 0);
+    const killed = r.status !== 0;
+    console.log(`${killed ? 'KILLED  ' : 'SURVIVED'} ${name} (${fail} failing tests)`);
+    if (!killed) survived++;
   }
 } finally {
   fs.writeFileSync(FILE, original);
