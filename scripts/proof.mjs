@@ -4,8 +4,9 @@
 // Everything here is produced by running the real code; nothing is edited by hand.
 //   test-report.txt   node --test output (spec reporter)
 //   scenarios/*.jsonl headless output of every scenarios/<name>/ + results.md (PASS/FAIL)
-//   determinism.txt   sha256 of two identical runs + one different seed
-//   perf.txt          headless speed for a full night, with machine config
+//   determinism.txt   sha256 of two identical runs + one different seed, for every night
+//   perf.txt          headless speed for a full night (21,600 ticks) on every night, with machine config
+//   fps.txt           (--gpu) average FPS of the 3D client at 1280x720 on the real GPU
 //   mutation.txt      injected bugs that the test suite must catch
 //   screenshots/*.png 3D client replaying scenarios (only if Chrome/Edge is found)
 //   browser-check.txt end-to-end test of the 3D client (keys, HUD, replay)  (needs Chrome/Edge)
@@ -48,53 +49,61 @@ write(
   `${header.replace(/^# /gm, '> ')}| Scenario | Yêu cầu | Lệnh | Kết quả |\n|---|---|---|---|\n${rows.join('\n')}\n`,
 );
 
-// "Long night" workload: default random world (motes + shades spawning) for the full
-// 18000 ticks; huge flames so the run is not cut short; player runs in a slow circle
-// and pulses every 5 s. Written next to the evidence so it can be re-run by hand.
+// "Long night" workload per night: default random world (motes, shades, drifters, wind)
+// for the full night; huge flames so the run is not cut short; Mây walks in a slow circle,
+// pulses every 5 s and dashes every 7 s. Written next to the evidence so it can be re-run.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-proof-'));
 const LONG = path.join(OUT, 'long_night');
 fs.mkdirSync(LONG, { recursive: true });
 fs.writeFileSync(path.join(LONG, 'scenario.json'), JSON.stringify({ player: { flames: 1000000 } }, null, 1) + '\n');
 const frames = [];
-for (let k = 0; k < 18000; k += 30) {
+for (let k = 0; k < 21600; k += 30) {
   const f = { tick: k, move: [0, 1], cam_yaw_deg: (k / 30) * 6 };
   if (k % 300 === 0) f.pulse = true;
   else if (k % 300 === 30) f.pulse = false;
+  if (k % 420 === 0) f.dash = true;
+  else if (k % 420 === 30) f.dash = false;
   frames.push(f);
 }
 fs.writeFileSync(path.join(LONG, 'inputs.json'), JSON.stringify({ frames }) + '\n');
 const longArgs = ['--scenario', path.relative(ROOT, path.join(LONG, 'scenario.json')).split(path.sep).join('/'),
   '--inputs', path.relative(ROOT, path.join(LONG, 'inputs.json')).split(path.sep).join('/')];
+const NIGHTS = [1, 2, 3];
 
-// 3. determinism
+// 3. determinism (every night, full length)
 console.log('> determinism');
-const runHash = (seed, file) => {
+const runHash = (night, seed, file) => {
   const out = path.join(tmp, file);
-  const args = ['src/headless.js', '--seed', String(seed), '--night', '1', ...longArgs, '--ticks', '18000', '--out', out];
+  const args = ['src/headless.js', '--seed', String(seed), '--night', String(night), ...longArgs, '--ticks', '21600', '--out', out];
   node(args);
   return { cmd: `node ${args.join(' ').replace(out, file)}`, hash: crypto.createHash('sha256').update(fs.readFileSync(out)).digest('hex') };
 };
-const a = runHash(2026, 'a.jsonl');
-const b = runHash(2026, 'b.jsonl');
-const c = runHash(2027, 'c.jsonl');
-write(
-  'determinism.txt',
-  `${header}run A: ${a.cmd}\n  sha256 ${a.hash}\nrun B: ${b.cmd}\n  sha256 ${b.hash}\nrun C: ${c.cmd}\n  sha256 ${c.hash}\n\n` +
+let detOk = true;
+let detText = header;
+for (const night of NIGHTS) {
+  const a = runHash(night, 2026, `n${night}a.jsonl`);
+  const b = runHash(night, 2026, `n${night}b.jsonl`);
+  const c = runHash(night, 2027, `n${night}c.jsonl`);
+  detOk &&= a.hash === b.hash && a.hash !== c.hash;
+  detText += `## night ${night}\nrun A: ${a.cmd}\n  sha256 ${a.hash}\nrun B: ${b.cmd}\n  sha256 ${b.hash}\nrun C: ${c.cmd}\n  sha256 ${c.hash}\n` +
     `A == B (same seed): ${a.hash === b.hash ? 'IDENTICAL -> PASS' : 'DIFFERENT -> FAIL'}\n` +
-    `A != C (other seed): ${a.hash !== c.hash ? 'DIFFERENT -> PASS' : 'IDENTICAL -> FAIL'}\n`,
-);
-console.log(`  same seed identical: ${a.hash === b.hash}`);
+    `A != C (other seed): ${a.hash !== c.hash ? 'DIFFERENT -> PASS' : 'IDENTICAL -> FAIL'}\n\n`;
+  console.log(`  night ${night}: same seed identical: ${a.hash === b.hash}`);
+}
+write('determinism.txt', detText);
 
-// 4. headless performance (full night = 18000 ticks)
+// 4. headless performance: a full night must finish in <= 30 s (contract v1.1)
 console.log('> perf');
 const perfLines = [];
-for (const seed of [1, 2, 3]) {
-  const out = path.join(tmp, `perf${seed}.jsonl`);
-  const t0 = process.hrtime.bigint();
-  node(['src/headless.js', '--seed', String(seed), '--night', '1', ...longArgs, '--ticks', '18000', '--out', out]);
-  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-  const end = JSON.parse(fs.readFileSync(out, 'utf8').trim().split('\n').at(-1));
-  perfLines.push(`seed ${seed}: ${end.ticks} ticks (state ${end.state}) in ${ms.toFixed(0)} ms wall (incl. Node startup) -> ${(end.ticks / (ms / 1000)).toFixed(0)} ticks/s`);
+for (const night of NIGHTS) {
+  for (const seed of [1, 2, 3]) {
+    const out = path.join(tmp, `perf${night}-${seed}.jsonl`);
+    const t0 = process.hrtime.bigint();
+    node(['src/headless.js', '--seed', String(seed), '--night', String(night), ...longArgs, '--ticks', '21600', '--out', out]);
+    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    const end = JSON.parse(fs.readFileSync(out, 'utf8').trim().split('\n').at(-1));
+    perfLines.push(`night ${night} seed ${seed}: ${end.ticks} ticks (state ${end.state}) in ${ms.toFixed(0)} ms wall (incl. Node startup) -> ${(end.ticks / (ms / 1000)).toFixed(0)} ticks/s  [limit 30000 ms: ${ms <= 30000 ? 'PASS' : 'FAIL'}]`);
+  }
 }
 write('perf.txt', `${header}workload: long_night/ (full night, random world, ${longArgs.join(' ')})\n${perfLines.join('\n')}\n`);
 perfLines.forEach((l) => console.log(`  ${l}`));
@@ -116,14 +125,23 @@ const BROWSERS = [
   'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
 ].filter(Boolean);
 const browser = BROWSERS.find((b) => fs.existsSync(b));
-const SHOTS = [
-  ['title', ''],
-  ['p1_01_lantern_lit', '?scenario=p1_01_collect_and_light&seed=1&until=290&speed=100'],
-  ['p1_02_pulse', '?scenario=p1_02_pulse_stun&seed=1&until=8&speed=1'],
-  ['p1_03_shade_near', '?scenario=p1_03_hit_and_lose&seed=1&until=25&speed=5'],
-  ['p1_05_win', '?scenario=p1_05_win_bonus&seed=1&speed=1'],
-  ['random_world', '?autostart&seed=42'],
-];
+const SHOTS = phase === '1'
+  ? [
+      ['title', ''],
+      ['random_world', '?autostart&seed=42'],
+    ]
+  : [
+      ['menu', ''],
+      ['night1', '?autostart&night=1&seed=42'],
+      ['night2', '?autostart&night=2&seed=42'],
+      ['night3', '?autostart&night=3&seed=42'],
+      ['p2_r01_lantern_lit', '?scenario=p2_r01_collect_deposit_score&until=290&speed=100'],
+      ['p2_r02_pulse_push', '?scenario=p2_r02_pulse_stun_push&until=8&speed=1'],
+      ['p2_m2_jump_pad_flight', '?scenario=p2_m2_jump_pad&until=50&speed=10'],
+      ['p2_m3_pad_to_tier2', '?scenario=p2_m3_pad_tower&until=62&speed=10'],
+      ['p2_f09_drifter_chase', '?scenario=p2_f09_drifter_steal&until=60&speed=10'],
+      ['p2_f11_charm', '?scenario=p2_f11_charm&until=12&speed=3'],
+    ];
 if (!browser) {
   console.log('> screenshots skipped (no Chrome/Edge found; set CHROME=/path/to/chrome)');
 } else {
@@ -150,7 +168,17 @@ console.log('> browser check');
 const bc = node(['scripts/browser-check.mjs', '--shots', path.join(OUT, 'screenshots')], { timeout: 300000 });
 write('browser-check.txt', header + bc.stdout + bc.stderr);
 console.log(`  ${bc.status === 3 ? 'skipped (no browser)' : bc.stdout.trim().split('\n').at(-1)}`);
+// 8. FPS with the real GPU (Ticket-02: >= 30 FPS average at 1280x720), only with --gpu
+let fpsOk = true;
+if (process.argv.includes('--gpu')) {
+  console.log('> FPS (GPU)');
+  const f = node(['scripts/browser-check.mjs'], { timeout: 300000, env: { ...process.env, BROWSER_GPU: '1', REQUIRE_FPS: '30' } });
+  const gpu = spawnSync('powershell', ['-NoProfile', '-Command', '(Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name) -join "; "'], { encoding: 'utf8' }).stdout?.trim();
+  write('fps.txt', `${header}# GPU: ${gpu || 'unknown'}\n# command: BROWSER_GPU=1 REQUIRE_FPS=30 node scripts/browser-check.mjs\n\n${f.stdout}${f.stderr}`);
+  fpsOk = f.status === 0;
+  console.log(`  ${(f.stdout.match(/INFO .*FPS.*/) || ['no FPS line'])[0]}`);
+}
 
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\nEvidence written to ${path.relative(ROOT, OUT)}/`);
-process.exitCode = t.status === 0 && a.hash === b.hash && m.status === 0 && [0, 3].includes(bc.status) ? 0 : 1;
+process.exitCode = t.status === 0 && detOk && m.status === 0 && [0, 3].includes(bc.status) && fpsOk ? 0 : 1;

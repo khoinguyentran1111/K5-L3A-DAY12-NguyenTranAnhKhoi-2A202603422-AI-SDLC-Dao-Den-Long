@@ -53,7 +53,11 @@ const flags = [
   '--headless=new', '--enable-unsafe-swiftshader', '--hide-scrollbars', '--no-first-run',
   '--window-size=1280,720', `--remote-debugging-port=${dbg}`, `--user-data-dir=${tmp}`,
 ];
-if (process.platform !== 'darwin') flags.push('--use-angle=swiftshader'); // software WebGL (no GPU needed)
+if (process.env.BROWSER_GPU) {
+  // measure with the real GPU (FPS requirement); ANGLE on D3D11 (Windows) / Metal (macOS) / GL (Linux)
+  flags.push('--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-webgpu');
+  if (process.platform === 'win32') flags.push('--use-angle=d3d11');
+} else if (process.platform !== 'darwin') flags.push('--use-angle=swiftshader'); // software WebGL (no GPU needed)
 if (process.platform === 'linux') flags.push('--no-sandbox'); // Ubuntu 24.04 CI blocks Chrome's user-namespace sandbox
 const chrome = spawn(browserPath, [...flags, 'about:blank'], { stdio: 'ignore' });
 
@@ -137,19 +141,23 @@ try {
 
   log(`browser: ${path.basename(browserPath)} | ${os.type()} ${os.release()} | Node ${process.version}`);
 
-  // 1. Title screen -> Enter starts a game (R10 start)
+  const D = 'window.__ddl';
+  const press = (code) => hold(code, 60);
+
+  // 1. Main menu -> night intro (Ông Đăng) -> play Night 1   (F3)
   await send('Page.navigate', { url: `http://localhost:${port}/` });
   const loaded = await waitFor('!!window.__ddl', 30000);
   const webgl = await evaluate("!!document.createElement('canvas').getContext('webgl2')");
   check('page loads and WebGL is available', loaded && webgl, `loaded=${loaded} webgl2=${webgl} errors=${consoleErrors.slice(0, 2).join(' | ')}`);
   if (!loaded) throw new Error('client did not start');
-  check('title screen shown, no game yet', await evaluate("window.__ddl.mode === 'title' && !document.getElementById('overlay').hidden"));
-  await hold('Enter', 50);
-  check('Enter starts a game', await waitFor("window.__ddl.mode === 'playing' && window.__ddl.game.state === 'playing'"));
+  check('main menu is shown first', await waitFor(`${D}.screen === 'menu'`));
+  await press('Enter');
+  check('Enter -> night intro with the island name and Ông Đăng', await waitFor(`${D}.screen === 'intro' && /Đảo Bến/.test(document.getElementById('card').textContent) && /Ông Đăng/.test(document.getElementById('card').textContent)`));
+  await shot('p2_intro');
+  await press('Enter');
+  check('Enter -> playing Night 1', await waitFor(`${D}.mode === 'playing' && ${D}.game.night === 1 && ${D}.screen === null`));
 
-  // 2. Keyboard movement through the real input mapping (yaw 0: W = +Z, D = screen-right = -X)
-  await open('?autostart&seed=3');
-  // Hold a key until Mây has moved far enough (slow CI renderers run fewer ticks per second).
+  // 2. real key presses through the input mapping (yaw 0: W = +Z, D = screen-right = -X)
   const moveWhile = async (code, cond) => {
     await key(code, 'keyDown');
     const ok = await waitFor(cond, 10000);
@@ -157,57 +165,116 @@ try {
     await sleep(100);
     return ok;
   };
-  const p0 = await evaluate('({...window.__ddl.game.player})');
-  const wOk = await moveWhile('KeyW', `window.__ddl.game.player.z - ${p0.z} > 1.5`);
-  const p1 = await evaluate('({...window.__ddl.game.player})');
-  check('W moves Mây forward (+Z)', wOk && Math.abs(p1.x - p0.x) < 0.3, `dz=${(p1.z - p0.z).toFixed(2)} dx=${(p1.x - p0.x).toFixed(2)}`);
-  const dOk = await moveWhile('KeyD', `window.__ddl.game.player.x - ${p1.x} < -1`);
-  const p2 = await evaluate('({...window.__ddl.game.player})');
-  check('D moves Mây to screen-right (-X at yaw 0)', dOk && Math.abs(p2.z - p1.z) < 0.3, `dx=${(p2.x - p1.x).toFixed(2)} dz=${(p2.z - p1.z).toFixed(2)}`);
+  const p0 = await evaluate(`({...${D}.game.player})`);
+  const wOk = await moveWhile('KeyW', `${D}.game.player.z - ${p0.z} > 1.5`);
+  const p1 = await evaluate(`({...${D}.game.player})`);
+  check('W moves Mây forward (+Z)', wOk && Math.abs(p1.x - p0.x) < 0.3, `dz=${(p1.z - p0.z).toFixed(2)}`);
+  const dOk = await moveWhile('KeyD', `${D}.game.player.x - ${p1.x} < -1`);
+  check('D moves Mây to screen-right (-X at yaw 0)', dOk);
   await key('Space', 'keyDown');
-  const jumped = await waitFor('window.__ddl.game.player.y > 0.3', 2000);
+  check('Space makes Mây jump', await waitFor(`${D}.game.player.y > 0.3`, 3000));
   await key('Space', 'keyUp');
-  check('Space makes Mây jump', jumped);
+  await sleep(1200);
+  const dz0 = await evaluate(`${D}.game.player.z`);
+  await press('ShiftLeft');
+  check('Shift dashes (dash cooldown starts)', await waitFor(`${D}.game.player.dashCd > 0`, 3000), `dz=${((await evaluate(`${D}.game.player.z`)) - dz0).toFixed(2)}`);
+  await waitFor(`${D}.game.player.dashTicks === 0`, 3000); // let the dash finish before teleporting Mây below
 
-  // 3. HUD shows the simulation state
-  const hud = await evaluate(`(() => { const g = window.__ddl.game; const t = (id) => document.getElementById(id).textContent;
-    return { carried: t('carried') === String(g.player.carried), lit: t('lit') === String(g.lanterns.filter(l => l.lit).length),
-      score: t('score') === String(g.score), flames: document.querySelectorAll('.flame:not(.out)').length === g.player.flames,
-      time: /^\\d:\\d\\d$/.test(t('time')) }; })()`);
-  check('HUD matches state (flames, carried, lanterns, time, score)', hud && Object.values(hud).every(Boolean), JSON.stringify(hud));
+  // 3. HUD layout and values   (F7)
+  const hud = await evaluate(`(() => { const g = ${D}.game; const t = (id) => document.getElementById(id).textContent;
+    const r = (id) => document.getElementById(id).getBoundingClientRect(); const W = innerWidth, H = innerHeight;
+    const tl = Math.ceil(g.timeStart - g.simTick / 60 - 1e-9);
+    return {
+      flames: document.querySelectorAll('.flame:not(.out)').length === g.player.flames,
+      flamesTopLeft: r('flames').left < W * 0.25 && r('flames').top < H * 0.2,
+      clock: t('clock') === String(Math.floor(tl / 60)).padStart(2, '0') + ':' + String(tl % 60).padStart(2, '0'),
+      clockTopCenter: Math.abs((r('clock').left + r('clock').right) / 2 - W / 2) < 40 && r('clock').top < H * 0.15,
+      lamps: t('lamps') === g.lanterns.filter(l => l.lit).length + '/' + g.lanterns.length,
+      score: t('score') === String(g.score),
+      topRight: r('lamps').right > W * 0.75 && r('score').top < H * 0.25,
+      moteBar10: document.querySelectorAll('.mote-cell').length === 10 && document.querySelectorAll('.mote-cell.on').length === g.player.carried,
+      barBottomCenter: Math.abs((r('moteBar').left + r('moteBar').right) / 2 - W / 2) < 40 && r('moteBar').bottom > H * 0.85,
+      cooldownsBottomRight: r('cdDash').left > W * 0.7 && r('cdPulse').bottom > H * 0.8,
+    }; })()`);
+  check('HUD values and positions match the sim (flames TL, clock TC, lamps+score TR, 10-cell bar BC, cooldowns BR)', hud && Object.values(hud).every(Boolean), JSON.stringify(hud));
+  await evaluate(`(() => { const g = ${D}.game; g.player.x = 0; g.player.z = 23.5; })()`);
+  const promptOk = await waitFor(`!document.getElementById('prompt').hidden && document.getElementById('prompt').textContent.includes('Nạp ánh sáng (0/10)')`, 3000);
+  const dbgState = async () => JSON.stringify(await evaluate(`(() => { const g = ${D}.game, P = g.player; return { mode: ${D}.mode, screen: ${D}.screen, paused: g.paused, state: g.state, fallen: P.fallen, pos: [P.x, P.y, P.z].map(v => +v.toFixed(2)), prompt: document.getElementById('prompt').textContent }; })()`));
+  check('prompt "E — Nạp ánh sáng (x/10)" near an unlit lantern', promptOk, promptOk ? '' : await dbgState());
+  check('ambient light = 0.15 with no lantern lit (F9)', Math.abs((await evaluate(`${D}.ambient`)) - 0.15) < 1e-9);
   await shot('browser_playing');
+  // deterministic camera: Mây at (0,0,12); yaw 0 -> camera at z=3 sees L1 (z=25) ahead; yaw 180 -> camera at z=21, L1 is 4 m behind it
+  await evaluate(`(() => { const g = ${D}.game; g.player.x = 0; g.player.z = 12; ${D}.setCamYaw(0); })()`);
+  const arrowHiddenAhead = await waitFor(`document.getElementById('arrow').hidden`, 3000);
+  await evaluate(`${D}.setCamYaw(180)`);
+  const arrowOk = await waitFor(`!document.getElementById('arrow').hidden`, 3000);
+  check('arrow hidden while the nearest unlit lantern is on screen, shown when it is behind the camera', arrowHiddenAhead && arrowOk, arrowOk ? '' : await dbgState());
 
-  // 4. Win -> overlay -> R replays (R10). p1_05 wins on tick 1 with 349 points.
-  await open('?scenario=p1_05_win_bonus&seed=1');
-  check('replay p1_05 reaches "won" with 349 points like headless', await waitFor("window.__ddl.mode === 'over' && window.__ddl.game.state === 'won' && window.__ddl.game.score === 349"));
-  check('win overlay visible with replay hint', await evaluate("!document.getElementById('overlay').hidden && /chơi lại/.test(document.getElementById('ov-cta').textContent)"));
-  await shot('browser_won');
-  const before = await evaluate('window.__ddl.gamesStarted');
-  await hold('KeyR', 50);
-  check('R after a win starts a fresh game', await waitFor(`window.__ddl.gamesStarted === ${before + 1}`), `games ${before} -> ${await evaluate('window.__ddl.gamesStarted')}`);
-  await sleep(300);
-  check('a key that is not R/Enter does not restart', await (async () => {
-    await open('?scenario=p1_05_win_bonus&seed=1');
-    await waitFor("window.__ddl.mode === 'over'");
-    const n = await evaluate('window.__ddl.gamesStarted');
-    await hold('KeyW', 100);
-    await sleep(200);
-    return (await evaluate('window.__ddl.gamesStarted')) === n;
-  })());
+  // 4. pause: logic stops completely; menu has the 4 entries   (F4)
+  await press('Escape');
+  check('Esc pauses: pause menu with Tiếp tục / Chơi lại Đêm / Cài đặt / Về menu', await waitFor(`${D}.screen === 'pause' && ${D}.game.paused && ['btnResume','btnRestart','btnPauseSettings','btnMenu'].every(id => document.getElementById(id))`));
+  const st0 = await evaluate(`${D}.game.simTick`);
+  const tk0 = await evaluate(`${D}.game.tick`);
+  await sleep(800);
+  check('while paused sim_tick is frozen but ticks still advance', (await evaluate(`${D}.game.simTick`)) === st0 && (await evaluate(`${D}.game.tick`)) > tk0);
+  await shot('p2_pause');
+  await press('Enter');
+  check('Enter / Tiếp tục resumes', await waitFor(`!${D}.game.paused && ${D}.screen === null && ${D}.game.simTick > ${st0}`));
 
-  // 5. Lose (dawn) -> Enter replays
-  await open('?scenario=p1_04_dawn&seed=1');
-  check('replay p1_04 reaches "lost" (dawn)', await waitFor("window.__ddl.mode === 'over' && window.__ddl.game.state === 'lost' && window.__ddl.game.reason === 'dawn'"));
-  await shot('browser_lost');
-  const beforeLoss = await evaluate('window.__ddl.gamesStarted');
-  await hold('Enter', 50);
-  check(
-    'Enter after a loss starts a fresh game',
-    await waitFor(`window.__ddl.gamesStarted === ${beforeLoss + 1} && window.__ddl.mode === 'playing' && window.__ddl.game.state === 'playing'`),
-  );
+  // 5. settings persist across reloads   (F5)
+  await press('KeyP');
+  await waitFor(`${D}.screen === 'pause'`);
+  await evaluate("document.getElementById('btnPauseSettings').click()");
+  await waitFor(`${D}.screen === 'settings'`);
+  await evaluate("(() => { const v = document.getElementById('vol'); v.value = '0.35'; v.dispatchEvent(new Event('input')); const s = document.getElementById('sens'); s.value = '1.7'; s.dispatchEvent(new Event('input')); })()");
+  await send('Page.reload', {});
+  await sleep(500);
+  await waitFor('!!window.__ddl', 30000);
+  const saved = await evaluate(`${D}.settings`);
+  check('volume and mouse sensitivity are saved between sessions', saved && Math.abs(saved.volume - 0.35) < 1e-9 && Math.abs(saved.sensitivity - 1.7) < 1e-9, JSON.stringify(saved));
 
-  // A scenario without inputs.json is legal (contract: no inputs = stand still); its 404 is expected.
-  const realErrors = consoleErrors.filter((e) => !/404.*\/scenarios\/[\w-]+\/inputs\.json/.test(e));
+  // 6. win a night -> result -> next night intro -> Night 2   (F3)
+  await open('?scenario=p2_r05_win_bonus');
+  check('replay p2_r05 wins Night 1 with 478 points like headless', await waitFor(`${D}.game.state === 'won' && ${D}.game.score === 478`));
+  check('ambient light reaches 0.7 when every lantern is lit (F9)', await waitFor(`Math.abs(${D}.ambient - 0.7) < 1e-9`, 3000));
+  check('result screen after a won night offers "Đêm kế tiếp"', await waitFor(`${D}.screen === 'result' && !!document.getElementById('btnNext')`));
+  await shot('p2_result_won');
+  await evaluate("document.getElementById('btnNext').click()");
+  check('-> intro of Night 2 (Đảo Cau)', await waitFor(`${D}.screen === 'intro' && /Đảo Cau/.test(document.getElementById('card').textContent)`));
+  await press('Enter');
+  check('-> playing Night 2 with 6 lanterns, total score carried over', await waitFor(`${D}.mode === 'playing' && ${D}.game.night === 2 && ${D}.game.lanterns.length === 6 && ${D}.campaign.total === 478`));
+  await shot('p2_night2');
+
+  // 7. lose -> retry the same night
+  await open('?scenario=p2_r04_dawn');
+  const red = await waitFor(`document.getElementById('clock').classList.contains('danger')`, 5000);
+  check('replay p2_r04 loses at dawn; clock is red (≤ 30 s)', red && (await waitFor(`${D}.game.state === 'lost' && ${D}.game.reason === 'dawn'`)));
+  check('result screen after a loss offers "Chơi lại Đêm"', await waitFor(`${D}.screen === 'result' && !!document.getElementById('btnRetry')`));
+  const before = await evaluate(`${D}.gamesStarted`);
+  await press('Enter');
+  check('Enter replays the same night', await waitFor(`${D}.gamesStarted === ${before + 1} && ${D}.mode === 'playing' && ${D}.game.night === 1`));
+
+  // 8. win Night 3 -> Dawn screen with the total score
+  await open('?scenario=ui_n3_win&night=3&seed=1');
+  check('winning Night 3 shows the Dawn (Bình Minh) screen with the total', await waitFor(`${D}.screen === 'dawn' && document.getElementById('dawnTotal').textContent === String(${D}.campaign.total) && ${D}.campaign.total === ${D}.game.score`, 20000));
+  await shot('p2_dawn');
+
+  // 9. FPS during normal play at 1280x720 on this machine's renderer
+  await open('?autostart&night=3&seed=5');
+  await key('KeyW', 'keyDown');
+  await sleep(1500);
+  const samples = [];
+  for (let i = 0; i < 6; i++) {
+    await sleep(500);
+    samples.push(await evaluate(`${D}.fps`));
+  }
+  await key('KeyW', 'keyUp');
+  const avg = samples.reduce((x, y) => x + y, 0) / samples.length;
+  log(`INFO  average FPS (Night 3, 1280x720, ${process.env.BROWSER_GPU ? 'GPU' : 'software renderer'}): ${avg.toFixed(1)} [${samples.join(', ')}]`);
+  if (process.env.REQUIRE_FPS) check(`average FPS >= ${process.env.REQUIRE_FPS}`, avg >= Number(process.env.REQUIRE_FPS), avg.toFixed(1));
+
+  // A scenario without inputs.json / expect.json is legal (UI-only scenarios); its 404 is expected.
+  const realErrors = consoleErrors.filter((e) => !/404.*\/scenarios\/[\w-]+\/(inputs|expect)\.json/.test(e));
   check('no console errors / exceptions', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));
   ws.close();
 } catch (e) {
