@@ -1,0 +1,95 @@
+{
+  "requirement": "S1 6 m/s, S4 nhặt ≤ 1.0 m, sức chứa 10, S6 đèn cần 10, S14 +10 mỗi đom đóm NẠP (không cộng lúc nhặt) +100 mỗi đèn",
+  "why": "z(tick t) = 0.1t. Đom đóm i ở z = 2.05 + 2i được nhặt khi z ≥ 1.05 + 2i, tức tick 11 + 20i (11…191). Đi 235 bước thì z = 23.5, cách L1 1.5 m ≤ 2.0. Interact ở tick 240 nên sự kiện ở tick 241: nạp 10, thắp L1. Điểm = 10×10 + 100 = 200; ở tick 200 điểm vẫn 0 dù đang mang 10.",
+  "args": {
+    "seed": 1,
+    "ticks": 300
+  },
+  "events": [
+    {
+      "tick": 0,
+      "name": "night_start",
+      "data": {
+        "night": 1
+      }
+    },
+    {
+      "tick": 11,
+      "name": "mote_picked",
+      "data": {
+        "carried": 1
+      }
+    },
+    {
+      "tick": 191,
+      "name": "mote_picked",
+      "data": {
+        "carried": 10
+      }
+    },
+    {
+      "tick": 241,
+      "name": "deposit",
+      "data": {
+        "lantern_id": "L1",
+        "amount": 10,
+        "deposited": 10
+      }
+    },
+    {
+      "tick": 241,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1"
+      }
+    }
+  ],
+  "event_counts": {
+    "mote_picked": 10,
+    "deposit": 1,
+    "lantern_lit": 1
+  },
+  "snapshots": {
+    "200": {
+      "score": 0,
+      "player": {
+        "carried": 10
+      }
+    },
+    "300": {
+      "score": 200,
+      "player": {
+        "pos": [
+          0,
+          0,
+          23.5
+        ],
+        "carried": 0
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "lit": true,
+          "deposited": 10
+        },
+        {
+          "lit": false
+        },
+        {
+          "lit": false
+        },
+        {
+          "lit": false
+        },
+        {
+          "lit": false
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 300,
+    "state": "playing",
+    "score": 200
+  }
+}

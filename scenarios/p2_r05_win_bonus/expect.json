@@ -1,0 +1,44 @@
+{
+  "requirement": "S13 thắp hết thì thắng; S14 điểm: 3×10 nạp + 100 đèn + floor(giây còn)×2 + 50×lửa; dựng scenario không cộng điểm",
+  "why": "Tick 0 điểm 0 dù 4 đèn đã lit. Nạp 3 vào L5 (7+3 = 10) thì thắp, thắng ở tick 1. Điểm = 30 + 100 + floor(100 − 1/60) × 2 = 198, + 150 = 478.",
+  "args": {
+    "seed": 1,
+    "ticks": 100
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "deposit",
+      "data": {
+        "lantern_id": "L5",
+        "amount": 3,
+        "deposited": 10
+      }
+    },
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L5"
+      }
+    },
+    {
+      "tick": 1,
+      "name": "game_over",
+      "data": {
+        "result": "won",
+        "reason": "all_lit"
+      }
+    }
+  ],
+  "snapshots": {
+    "0": {
+      "score": 0
+    }
+  },
+  "end": {
+    "ticks": 1,
+    "state": "won",
+    "score": 478
+  }
+}

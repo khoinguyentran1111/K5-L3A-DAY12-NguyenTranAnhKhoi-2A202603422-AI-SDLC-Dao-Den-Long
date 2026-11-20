@@ -1,0 +1,122 @@
+{
+  "requirement": "S10 chạm XZ ≤ 1.0: −1 lửa, rơi floor(5/2)=2 ra vành 1.5–2.5 m (TTL 480), bất tử 90, recoil 2 m/60 tick; S13 hết lửa thì thua",
+  "why": "x(t) = 2.03 − t/15. Tick 16: x = 0.963 ≤ 1 nên bị hit: lửa 1, rơi 2, mang 3. Recoil lùi 2/60 m mỗi tick ở tick 17…76 tới x = 2.963, rồi đuổi lại. Bất tử từ tick 16, về 0 ở tick 106; Bóng Mực tới x ≤ 1 sau 30 bước, đúng tick 106, nên hit lần 2: lửa 0, rơi floor(3/2) = 1, thua no_flames ở tick 106.",
+  "args": {
+    "seed": 1,
+    "ticks": 600,
+    "snapshot_every": 2
+  },
+  "events": [
+    {
+      "tick": 16,
+      "name": "player_hit",
+      "data": {
+        "by": "shade",
+        "flames": 1,
+        "dropped": 2
+      }
+    },
+    {
+      "tick": 106,
+      "name": "player_hit",
+      "data": {
+        "by": "shade",
+        "flames": 0,
+        "dropped": 1
+      }
+    },
+    {
+      "tick": 106,
+      "name": "game_over",
+      "data": {
+        "result": "lost",
+        "reason": "no_flames"
+      }
+    }
+  ],
+  "event_counts": {
+    "player_hit": 2
+  },
+  "snapshots": {
+    "16": {
+      "player": {
+        "flames": 1,
+        "carried": 3,
+        "invuln": 1.5
+      },
+      "motes_active": 2,
+      "motes": [
+        {
+          "kind": "dropped",
+          "ttl_s": 8
+        },
+        {
+          "kind": "dropped",
+          "ttl_s": 8
+        }
+      ],
+      "shades": [
+        {
+          "pos": [
+            0.963,
+            1,
+            0
+          ],
+          "state": "recoil"
+        }
+      ]
+    },
+    "20": {
+      "shades": [
+        {
+          "pos": [
+            1.097,
+            1,
+            0
+          ],
+          "state": "recoil"
+        }
+      ]
+    },
+    "70": {
+      "shades": [
+        {
+          "pos": [
+            2.763,
+            1,
+            0
+          ],
+          "state": "recoil"
+        }
+      ]
+    },
+    "80": {
+      "shades": [
+        {
+          "pos": [
+            2.697,
+            1,
+            0
+          ],
+          "state": "chase"
+        }
+      ]
+    },
+    "106": {
+      "state": "lost",
+      "player": {
+        "flames": 0,
+        "carried": 2
+      }
+    }
+  },
+  "invariants": [
+    "dropped_motes_in_ring",
+    "shade_states_valid"
+  ],
+  "end": {
+    "ticks": 106,
+    "state": "lost",
+    "score": 0
+  }
+}

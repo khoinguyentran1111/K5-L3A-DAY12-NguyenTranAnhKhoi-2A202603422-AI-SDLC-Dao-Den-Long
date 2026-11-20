@@ -1,0 +1,77 @@
+{
+  "requirement": "F1 Gió Lạc: idle → chase khi Mây mang ≥ 5 và cách ≤ 15 m; chạm XZ ≤ 1.2 thì cướp min(3, mang), flee 240 tick rồi removed; bất tử không ngăn; không mất lửa",
+  "why": "Tick 1 chuyển chase, bay 7/60 m mỗi tick: x(t) = 10 − 0.11667t ≤ 1.2 khi t = 76 (x = 1.133). Cướp 3, còn 3. Flee ra xa (+X) ở tick 77…315; removed ở tick 316 tại x = 1.133 + 239 × 0.11667 = 29.017 (trên cầu, y = 1.5).",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 330
+  },
+  "events": [
+    {
+      "tick": 76,
+      "name": "drifter_steal",
+      "data": {
+        "drifter_id": "D1",
+        "amount": 3,
+        "carried": 3
+      }
+    }
+  ],
+  "event_counts": {
+    "drifter_steal": 1,
+    "player_hit": 0
+  },
+  "snapshots": {
+    "10": {
+      "drifters": [
+        {
+          "id": "D1",
+          "pos": [
+            8.833,
+            1.5,
+            0
+          ],
+          "state": "chase",
+          "stolen": 0
+        }
+      ]
+    },
+    "80": {
+      "player": {
+        "carried": 3,
+        "flames": 3
+      },
+      "drifters": [
+        {
+          "state": "flee",
+          "stolen": 3
+        }
+      ]
+    },
+    "310": {
+      "drifters": [
+        {
+          "state": "flee"
+        }
+      ]
+    },
+    "320": {
+      "drifters": [
+        {
+          "id": "D1",
+          "pos": [
+            29.017,
+            1.5,
+            0
+          ],
+          "state": "removed",
+          "stolen": 3
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 330,
+    "state": "playing"
+  }
+}

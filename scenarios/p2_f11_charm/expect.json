@@ -1,0 +1,92 @@
+{
+  "requirement": "F2 Bùa Gió (Đêm 2, (35,0,0)): nhặt như đom đóm, 600 tick tốc độ 7.2 và lướt không hồi chiêu (nhấn khi đang lướt bị bỏ qua), xuất hiện lại sau 2700 tick",
+  "why": "x(t) = 33.05 + 0.1t, nhặt ở tick 10 (x = 34.05). Tick 11…20 đi 0.12 m mỗi tick, x = 35.25. Lướt ở tick 31 (tới x = 38.05), nhấn ở tick 36 đang lướt nên bỏ qua, lướt lại ở tick 51 (x = 40.85, vẫn trên cầu) dù chưa qua 90 tick. Bùa hết ở tick 610. Bùa xuất hiện lại ở tick 10 + 2700 = 2710.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 2720
+  },
+  "events": [
+    {
+      "tick": 10,
+      "name": "charm_picked",
+      "data": {
+        "charm_id": "C1",
+        "charm_ticks": 600
+      }
+    },
+    {
+      "tick": 31,
+      "name": "dash",
+      "data": {}
+    },
+    {
+      "tick": 51,
+      "name": "dash",
+      "data": {}
+    }
+  ],
+  "event_counts": {
+    "charm_picked": 1,
+    "dash": 2
+  },
+  "snapshots": {
+    "20": {
+      "player": {
+        "pos": [
+          35.25,
+          0,
+          0
+        ],
+        "charm_s": 9.833
+      },
+      "charms": [
+        {
+          "id": "C1",
+          "available": false,
+          "respawn_s": 44.833
+        }
+      ]
+    },
+    "40": {
+      "player": {
+        "dash_cd_s": 0
+      }
+    },
+    "70": {
+      "player": {
+        "pos": [
+          40.85,
+          0,
+          0
+        ],
+        "grounded": true
+      }
+    },
+    "620": {
+      "player": {
+        "charm_s": 0
+      }
+    },
+    "2700": {
+      "charms": [
+        {
+          "available": false,
+          "respawn_s": 0.167
+        }
+      ]
+    },
+    "2710": {
+      "charms": [
+        {
+          "available": true,
+          "respawn_s": 0
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 2720,
+    "state": "playing"
+  }
+}

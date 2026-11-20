@@ -1,0 +1,69 @@
+{
+  "requirement": "S3 Lướt 14 m/s trong 12 tick (2.8 m), hồi chiêu 90 tick tính từ lúc bắt đầu; đứng yên thì lướt theo hướng mặt (+Z lúc xuất phát)",
+  "why": "Lướt ở tick 1…12: z = 12 × 14/60 = 2.8; z(10) = 2.333; dash_cd(10) = (90 − 9)/60 = 1.35. Nhấn ở tick 31 bị bỏ qua (còn hồi chiêu). Nhấn ở tick 101 (hồi chiêu hết ở tick 91) thì lướt tiếp, z = 5.6; dash_cd(120) = (90 − 19)/60 = 1.183 (giảm ở tick 102…120).",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "dash",
+      "data": {}
+    },
+    {
+      "tick": 101,
+      "name": "dash",
+      "data": {}
+    }
+  ],
+  "event_counts": {
+    "dash": 2
+  },
+  "snapshots": {
+    "10": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          2.333
+        ],
+        "vel": [
+          0,
+          0,
+          14
+        ],
+        "dash_cd_s": 1.35,
+        "grounded": true
+      }
+    },
+    "20": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          2.8
+        ],
+        "vel": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "120": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          5.6
+        ],
+        "dash_cd_s": 1.183
+      }
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "requirement": "S5 Đom đóm: 20 con ở 20 điểm khác nhau; mỗi 240 tick +1 vào điểm trống nếu < 30; hết điểm trống thì bỏ lượt",
+  "why": "Đêm 1 có 24 điểm. 20 → 21 (240) → 22 (480) → 23 (720) → 24 (960); ở 1200 không còn điểm trống nên vẫn 24.",
+  "args": {
+    "seed": 5,
+    "ticks": 1300
+  },
+  "snapshots": {
+    "0": {
+      "motes_active": 20
+    },
+    "230": {
+      "motes_active": 20
+    },
+    "240": {
+      "motes_active": 21
+    },
+    "960": {
+      "motes_active": 24
+    },
+    "1300": {
+      "motes_active": 24
+    }
+  },
+  "invariants": [
+    "random_motes_on_points_distinct"
+  ],
+  "end": {
+    "ticks": 1300
+  }
+}

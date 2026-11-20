@@ -1,0 +1,44 @@
+{
+  "requirement": "M2 Bục nhảy (20,0,18): vy = 14, ngang 24 m/s về tâm đảo B, bay khoảng 1.4 s, đáp trong đảo B; phím không ghi đè",
+  "why": "Tick 5: z = 17.05, cách tâm bục 0.95 ≤ 1 nên phóng theo (50,−18)/53.14 × 24 = (22.581, −8.129). Theo giải tích y = 0 đúng ở n = 85 (1.42 s), nên thời điểm đáp tùy sai số float là bước 85 hoặc 86; vì thế x, z so gần đúng. x ≈ 20 + 22.581 × 85.5/60 = 52.18, z ≈ 17.05 − 8.129 × 85.5/60 = 5.47, nằm trong đảo B. y(50) = 3 + … = (14×45 − 45×44/6)/60 = 5.0.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 120
+  },
+  "event_counts": {
+    "player_hit": 0
+  },
+  "snapshots": {
+    "50": {
+      "player": {
+        "pos": [
+          36.936,
+          5,
+          10.953
+        ],
+        "grounded": false
+      }
+    },
+    "120": {
+      "player": {
+        "pos": [
+          {
+            "approx": 52.18,
+            "tol": 0.25
+          },
+          0,
+          {
+            "approx": 5.47,
+            "tol": 0.1
+          }
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing"
+  }
+}

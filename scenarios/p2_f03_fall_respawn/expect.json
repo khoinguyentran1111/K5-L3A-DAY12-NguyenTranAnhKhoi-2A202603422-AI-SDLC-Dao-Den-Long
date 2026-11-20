@@ -1,0 +1,53 @@
+{
+  "requirement": "S12 Rơi khỏi đảo (Y < −10): đúng 1 lần, bỏ qua bất tử, −1 lửa, mất hết đom đóm (lost); chờ 60 tick; hồi sinh ở (0,0,0) với bất tử 90",
+  "why": "x(t) = 39.05 + 0.1t; tick 10: x = 40.05 > 40 nên rời đảo. Rơi từ tick 11: y = −n(n−1)/360 < −10 khi n = 61, tức tick 71 (x = 46.15). Có sự kiện dù đang bất tử (invuln 300). Chờ tới tick 131 thì hồi sinh; snapshot 140: (0,0,0), invuln = (90 − 9)/60 = 1.35.",
+  "args": {
+    "seed": 1,
+    "ticks": 200
+  },
+  "events": [
+    {
+      "tick": 71,
+      "name": "player_hit",
+      "data": {
+        "by": "fall",
+        "flames": 1,
+        "dropped": 0,
+        "lost": 4
+      }
+    }
+  ],
+  "event_counts": {
+    "player_hit": 1
+  },
+  "snapshots": {
+    "100": {
+      "player": {
+        "pos": [
+          46.15,
+          -10.167,
+          0
+        ],
+        "carried": 0,
+        "flames": 1,
+        "grounded": false
+      }
+    },
+    "140": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "invuln": 1.35,
+        "grounded": true,
+        "flames": 1
+      }
+    }
+  },
+  "end": {
+    "ticks": 200,
+    "state": "playing"
+  }
+}

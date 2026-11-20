@@ -1,0 +1,40 @@
+{
+  "requirement": "M3 Bục (0,3,13): vy = 12, 8 m/s về −Z, đáp lên tầng 2; tháp chuông r = 2 không đi xuyên được",
+  "why": "Tick 6: z = 13.95, cách tâm bục 0.95 nên phóng. Qua mép tầng 2 (z = 8) ở n = 45 với y = 6.5 > 6. Đáp khi y ≤ 6: n = 53 (y = 5.944), tức tick 59, z = 13.95 − 53×8/60 = 6.883. Từ tick 71 đi −Z 0.1 m mỗi tick tới z = 2.083; bước tiếp 1.983 < 2 nằm trong tháp nên bị chặn.",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 160
+  },
+  "snapshots": {
+    "60": {
+      "player": {
+        "pos": [
+          0,
+          6,
+          {
+            "approx": 6.883,
+            "tol": 0.002
+          }
+        ],
+        "grounded": true
+      }
+    },
+    "150": {
+      "player": {
+        "pos": [
+          0,
+          6,
+          {
+            "approx": 2.083,
+            "tol": 0.002
+          }
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 160
+  }
+}

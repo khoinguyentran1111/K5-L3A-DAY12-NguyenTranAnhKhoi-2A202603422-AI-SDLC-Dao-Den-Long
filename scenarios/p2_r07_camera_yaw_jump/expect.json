@@ -1,0 +1,35 @@
+{
+  "requirement": "S1 di chuyển theo yaw camera; S2 nhảy vy = 7, g = −20",
+  "why": "yaw 90, move [0,1] thì đi theo +X, 6 m trong 60 tick. y(10) = (7×10 − (1/3)×45)/60 = 0.917; tiếp đất sau khoảng 42 tick.",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "snapshots": {
+    "10": {
+      "player": {
+        "pos": [
+          1,
+          0.917,
+          0
+        ],
+        "grounded": false
+      }
+    },
+    "60": {
+      "player": {
+        "pos": [
+          6,
+          0,
+          0
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing",
+    "score": 0
+  }
+}

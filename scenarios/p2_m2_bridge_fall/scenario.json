@@ -1,0 +1,16 @@
+{
+  "random_motes": false,
+  "random_shades": false,
+  "random_drifters": false,
+  "wind_enabled": false,
+  "motes": [],
+  "shades": [],
+  "player": {
+    "pos": [
+      30,
+      0,
+      0.05
+    ],
+    "flames": 3
+  }
+}

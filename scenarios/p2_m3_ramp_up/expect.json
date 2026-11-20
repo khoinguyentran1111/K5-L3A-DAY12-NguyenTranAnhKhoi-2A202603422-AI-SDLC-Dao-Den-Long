@@ -1,0 +1,46 @@
+{
+  "requirement": "M3 Dốc 30°: chân ở r = 30 (Y = 0), đỉnh ở r = 24 (Y = 3), đi lên được tầng 1",
+  "why": "Xuất phát s = 31 trên trục dốc 30°, đi vào tâm 0.1 m mỗi tick. s(30) = 28, y = 3×(30−28)/6 = 1.0. s(120) = 19 nằm trên tầng 1: (19·cos30, 3, 19·sin30) = (16.454, 3, 9.5).",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 120
+  },
+  "snapshots": {
+    "30": {
+      "player": {
+        "pos": [
+          {
+            "approx": 24.249,
+            "tol": 0.002
+          },
+          1,
+          {
+            "approx": 14,
+            "tol": 0.002
+          }
+        ],
+        "grounded": true
+      }
+    },
+    "120": {
+      "player": {
+        "pos": [
+          {
+            "approx": 16.454,
+            "tol": 0.002
+          },
+          3,
+          {
+            "approx": 9.5,
+            "tol": 0.002
+          }
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 120
+  }
+}

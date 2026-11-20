@@ -1,0 +1,90 @@
+{
+  "requirement": "S8 Tỏa Sáng: tốn 3, 3D ≤ 5 m từ chân+0.8, choáng 120 tick, đẩy 4 m trong 15 tick, +5; không đủ 3 thì không kích hoạt",
+  "why": "Tâm (0,0.8,0), S1 tâm (3,1,0): khoảng cách 3.007 ≤ 5. carried 4→1. Đẩy +X 4/15 m mỗi tick ở tick 1…15: x(10) = 5.667, x(15) = 7. Choáng 120 tick (snapshot 1…120). Tick 121 đuổi lại 4/60 m/tick: x(130) = 6.333, x(200) = 1.667. Lần nhấn ở tick 191 đã hết hồi chiêu nhưng chỉ còn 1 < 3 nên không có pulse.",
+  "args": {
+    "seed": 1,
+    "ticks": 200
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "pulse",
+      "data": {
+        "stunned_ids": [
+          "S1"
+        ]
+      }
+    }
+  ],
+  "event_counts": {
+    "pulse": 1,
+    "player_hit": 0
+  },
+  "snapshots": {
+    "10": {
+      "score": 5,
+      "player": {
+        "carried": 1,
+        "pulse_cd_s": 2.85
+      },
+      "shades": [
+        {
+          "id": "S1",
+          "pos": [
+            5.667,
+            1,
+            0
+          ],
+          "state": "stunned"
+        }
+      ]
+    },
+    "120": {
+      "shades": [
+        {
+          "pos": [
+            7,
+            1,
+            0
+          ],
+          "state": "stunned"
+        }
+      ]
+    },
+    "130": {
+      "shades": [
+        {
+          "pos": [
+            6.333,
+            1,
+            0
+          ],
+          "state": "chase"
+        }
+      ]
+    },
+    "200": {
+      "player": {
+        "pulse_cd_s": 0
+      },
+      "shades": [
+        {
+          "pos": [
+            1.667,
+            1,
+            0
+          ],
+          "state": "chase"
+        }
+      ]
+    }
+  },
+  "invariants": [
+    "shade_states_valid"
+  ],
+  "end": {
+    "ticks": 200,
+    "state": "playing",
+    "score": 5
+  }
+}

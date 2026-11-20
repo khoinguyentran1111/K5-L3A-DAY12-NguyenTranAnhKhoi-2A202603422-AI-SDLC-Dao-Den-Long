@@ -9,6 +9,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { getNight } from '../src/core/maps.js';
+import { SHADE_STATES } from '../src/core/sim.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const SCENARIO_DIR = path.join(ROOT, 'scenarios');
@@ -22,6 +24,13 @@ export function listScenarios() {
 }
 
 function partial(actual, expected, at, failures) {
+  if (expected !== null && typeof expected === 'object' && 'approx' in expected) {
+    // {"approx": v, "tol": t}: for values whose exact float tick/landing is not meaningful
+    if (typeof actual !== 'number' || Math.abs(actual - expected.approx) > (expected.tol ?? 1e-6)) {
+      failures.push(`${at}: expected ${expected.approx} ± ${expected.tol}, got ${JSON.stringify(actual)}`);
+    }
+    return;
+  }
   if (Array.isArray(expected)) {
     if (!Array.isArray(actual) || actual.length !== expected.length) {
       failures.push(`${at}: expected array of length ${expected.length}, got ${JSON.stringify(actual)}`);
@@ -43,9 +52,12 @@ function partial(actual, expected, at, failures) {
   }
 }
 
+const near = (a, b, tol = 0.011) => Math.abs(a[0] - b[0]) <= tol && Math.abs(a[2] - b[2]) <= tol;
+const snaps = (lines) => lines.filter((l) => l.type === 'snapshot');
+
 const INVARIANTS = {
   shades_outside_safe_radius_of_lit_lanterns(lines, failures) {
-    for (const s of lines.filter((l) => l.type === 'snapshot')) {
+    for (const s of snaps(lines)) {
       for (const L of s.lanterns.filter((x) => x.lit)) {
         for (const sh of s.shades) {
           const d = Math.hypot(sh.pos[0] - L.pos[0], sh.pos[2] - L.pos[2]);
@@ -54,6 +66,51 @@ const INVARIANTS = {
       }
     }
   },
+  shade_states_valid(lines, failures) {
+    for (const s of snaps(lines)) for (const sh of s.shades) if (!SHADE_STATES.includes(sh.state)) failures.push(`tick ${s.tick}: ${sh.id} state ${sh.state}`);
+  },
+  shades_spawn_on_points(lines, failures, night) {
+    const pts = getNight(night).shadePoints;
+    const seen = new Set();
+    for (const s of snaps(lines)) {
+      for (const sh of s.shades) {
+        if (seen.has(sh.id)) continue;
+        seen.add(sh.id);
+        if (!pts.some((p) => near(p, sh.pos))) failures.push(`${sh.id} spawned at ${sh.pos} (not a night-${night} shade point)`);
+        if (Math.hypot(sh.pos[0] - s.player.pos[0], sh.pos[2] - s.player.pos[2]) < 15) failures.push(`${sh.id} spawned < 15 m from the player`);
+      }
+    }
+  },
+  random_motes_on_points_distinct(lines, failures, night) {
+    const pts = getNight(night).motePoints;
+    for (const s of snaps(lines)) {
+      const rnd = s.motes.filter((m) => m.kind === 'random');
+      for (const m of rnd) if (!pts.some((p) => near(p, m.pos, 0.001) && Math.abs(p[1] - m.pos[1]) < 1e-9)) failures.push(`tick ${s.tick}: ${m.id} not on a spawn point`);
+      const keys = new Set(rnd.map((m) => m.pos.join(',')));
+      if (keys.size !== rnd.length) failures.push(`tick ${s.tick}: two random motes share a point`);
+    }
+  },
+  dropped_motes_in_ring(lines, failures) {
+    const seen = new Set();
+    for (const s of snaps(lines)) {
+      for (const m of s.motes.filter((x) => x.kind === 'dropped' && !seen.has(x.id))) {
+        seen.add(m.id);
+        const d = Math.hypot(m.pos[0] - s.player.pos[0], m.pos[2] - s.player.pos[2]);
+        if (d < 1.5 - 0.01 || d > 2.5 + 0.01) failures.push(`${m.id} dropped ${d.toFixed(3)} m from Mây (want 1.5–2.5)`);
+      }
+    }
+  },
+  wind_push_10m(lines, failures) {
+    const S = snaps(lines);
+    const i = S.findIndex((s) => s.wind.active);
+    const j = S.findIndex((s, k) => k > i && !s.wind.active);
+    if (i < 1 || j < 0) return failures.push('no complete gust in the run');
+    const a = S[i - 1].player.pos;
+    const b = S[j].player.pos;
+    const dir = (S[i].wind.dir_deg * Math.PI) / 180;
+    const want = [a[0] + 10 * Math.cos(dir), a[2] + 10 * Math.sin(dir)];
+    if (Math.hypot(b[0] - want[0], b[2] - want[1]) > 0.05) failures.push(`gust ${S[i].wind.dir_deg}°: moved ${a} -> ${b}, expected ~(${want.map((v) => v.toFixed(2))})`);
+  },
 };
 
 export function runScenario(name, outFile) {
@@ -61,7 +118,7 @@ export function runScenario(name, outFile) {
   const expect = JSON.parse(fs.readFileSync(path.join(dir, 'expect.json'), 'utf8'));
   const a = expect.args || {};
   const rel = (f) => path.relative(ROOT, f).split(path.sep).join('/');
-  const cli = ['src/headless.js', '--seed', String(a.seed ?? 1), '--night', '1', '--ticks', String(a.ticks)];
+  const cli = ['src/headless.js', '--seed', String(a.seed ?? 1), '--night', String(a.night ?? 1), '--ticks', String(a.ticks)];
   for (const f of ['scenario', 'inputs']) {
     const p = path.join(dir, `${f}.json`);
     if (fs.existsSync(p)) cli.push(`--${f}`, rel(p));
@@ -104,7 +161,7 @@ export function runScenario(name, outFile) {
   }
   for (const inv of expect.invariants || []) {
     if (!INVARIANTS[inv]) failures.push(`unknown invariant ${inv}`);
-    else INVARIANTS[inv](lines, failures);
+    else INVARIANTS[inv](lines, failures, a.night ?? 1);
   }
   return { name, requirement: expect.requirement, command, pass: failures.length === 0, failures, lines };
 }

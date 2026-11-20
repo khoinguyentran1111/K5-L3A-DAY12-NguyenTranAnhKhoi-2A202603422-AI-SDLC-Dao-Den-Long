@@ -1,0 +1,27 @@
+{
+  "requirement": "M3 Vách đứng: từ tầng 0 không đi thẳng lên tầng 2 (Y = 6)",
+  "why": "z(t) = 10.55 − 0.1t; z = 8.05 ở tick 25; bước tiếp tới 7.95 có nền cao 6 > 0 + 0.3 nên bị chặn, đứng yên ở 8.05.",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 60
+  },
+  "snapshots": {
+    "60": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          {
+            "approx": 8.05,
+            "tol": 0.001
+          }
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 60
+  }
+}

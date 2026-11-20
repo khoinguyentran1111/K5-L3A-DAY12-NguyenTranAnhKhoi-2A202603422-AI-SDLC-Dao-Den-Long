@@ -1,0 +1,55 @@
+{
+  "requirement": "S15/F4 Tạm dừng: tick tăng nhưng sim_tick, thời gian, vị trí đứng yên; snapshot state \"paused\"",
+  "why": "Nhấn pause ở tick 31 (bước k = 30) nên dừng ngay; nhấn lại ở tick 61 thì resumed và bước đó chạy tiếp. Mô phỏng chạy ở tick 1…30 và 61…120, tức 90 bước: z = 9.0, time_left = 300 − 1.5.",
+  "args": {
+    "seed": 1,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 31,
+      "name": "paused",
+      "data": {}
+    },
+    {
+      "tick": 61,
+      "name": "resumed",
+      "data": {}
+    }
+  ],
+  "snapshots": {
+    "40": {
+      "state": "paused",
+      "tick": 40,
+      "sim_tick": 30,
+      "time_left_s": 299.5,
+      "player": {
+        "pos": [
+          0,
+          0,
+          3
+        ]
+      }
+    },
+    "60": {
+      "state": "paused",
+      "sim_tick": 30
+    },
+    "120": {
+      "state": "playing",
+      "sim_tick": 90,
+      "time_left_s": 298.5,
+      "player": {
+        "pos": [
+          0,
+          0,
+          9
+        ]
+      }
+    }
+  },
+  "end": {
+    "ticks": 120,
+    "state": "playing"
+  }
+}

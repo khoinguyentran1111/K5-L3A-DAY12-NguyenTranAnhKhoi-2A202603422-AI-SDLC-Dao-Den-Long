@@ -1,0 +1,65 @@
+{
+  "requirement": "S7 Bóng Mực đang ở trong lúc đèn vừa thắp bị đẩy ra mép trong ≤ 30 tick và không gây sát thương trong lúc đó",
+  "why": "Tick 1: nạp 1 (9 + 1 = 10) thì thắp L1 ở bước 5. S1 cách L1 1.5 m nên bị đẩy ra theo bán kính, đều 4.51/30 m mỗi tick ở tick 1…30; nó đi xuyên qua chỗ Mây (z = 23) mà không hit. z(10) = 21.997, z(30) = 18.99 (mép 6.01). Sau đó bị chặn ở mép. Điểm = 10 + 100.",
+  "args": {
+    "seed": 1,
+    "ticks": 300
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "lantern_lit",
+      "data": {
+        "lantern_id": "L1"
+      }
+    }
+  ],
+  "event_counts": {
+    "player_hit": 0
+  },
+  "snapshots": {
+    "10": {
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            21.997
+          ]
+        }
+      ]
+    },
+    "30": {
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            18.99
+          ]
+        }
+      ]
+    },
+    "300": {
+      "score": 110,
+      "player": {
+        "flames": 3
+      },
+      "shades": [
+        {
+          "pos": [
+            0,
+            1,
+            18.99
+          ],
+          "state": "chase"
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 300,
+    "state": "playing",
+    "score": 110
+  }
+}

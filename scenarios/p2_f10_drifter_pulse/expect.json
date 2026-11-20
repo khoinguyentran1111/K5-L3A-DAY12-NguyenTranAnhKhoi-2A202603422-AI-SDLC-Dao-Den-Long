@@ -1,0 +1,109 @@
+{
+  "requirement": "F1b Tỏa Sáng trúng Gió Lạc đang chase thì flee không cướp; trúng lúc flee có đồ thì thả lại đom đóm (drifter_drop) và biến mất sau 120 tick",
+  "why": "Tâm pulse (0,0.8,0); D1 (3,1.5,0) cách 3.08, D2 (2,1.5,−3) cách 3.67, cả hai ≤ 5. D1 chase → flee (removed ở tick 241). D2 thả 3 đom đóm rơi tại (2,0,−3), TTL 480 (snapshot 10: (480 − 9)/60 = 7.85), removed ở tick 121. Mang 9 − 3 = 6.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 260
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "pulse",
+      "data": {
+        "stunned_ids": []
+      }
+    },
+    {
+      "tick": 1,
+      "name": "drifter_drop",
+      "data": {
+        "drifter_id": "D2",
+        "amount": 3
+      }
+    }
+  ],
+  "event_counts": {
+    "drifter_steal": 0
+  },
+  "snapshots": {
+    "10": {
+      "player": {
+        "carried": 6
+      },
+      "motes_active": 3,
+      "motes": [
+        {
+          "pos": [
+            2,
+            0,
+            -3
+          ],
+          "kind": "dropped",
+          "ttl_s": 7.85
+        },
+        {
+          "pos": [
+            2,
+            0,
+            -3
+          ],
+          "kind": "dropped"
+        },
+        {
+          "pos": [
+            2,
+            0,
+            -3
+          ],
+          "kind": "dropped"
+        }
+      ],
+      "drifters": [
+        {
+          "id": "D1",
+          "state": "flee",
+          "stolen": 0
+        },
+        {
+          "id": "D2",
+          "state": "flee",
+          "stolen": 0
+        }
+      ]
+    },
+    "120": {
+      "drifters": [
+        {
+          "state": "flee"
+        },
+        {
+          "state": "flee"
+        }
+      ]
+    },
+    "130": {
+      "drifters": [
+        {
+          "state": "flee"
+        },
+        {
+          "state": "removed"
+        }
+      ]
+    },
+    "250": {
+      "drifters": [
+        {
+          "state": "removed"
+        },
+        {
+          "state": "removed"
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 260
+  }
+}

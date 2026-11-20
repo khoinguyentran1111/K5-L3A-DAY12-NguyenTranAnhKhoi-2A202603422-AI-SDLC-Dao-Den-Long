@@ -1,0 +1,44 @@
+{
+  "requirement": "S4 Nhặt cần chênh cao ≤ 1.5 m: đom đóm trên tầng 1 (cao hơn 3 m) không nhặt được dù XZ 0.7 m",
+  "why": "M1 ở (0,3,23.9): XZ 0.7 nhưng chênh cao 3 nên không nhặt. M2 ở (0,0,25.3): XZ 0.7, chênh 0, nhặt ở tick 1.",
+  "args": {
+    "seed": 1,
+    "night": 3,
+    "ticks": 60
+  },
+  "events": [
+    {
+      "tick": 1,
+      "name": "mote_picked",
+      "data": {
+        "carried": 1
+      }
+    }
+  ],
+  "event_counts": {
+    "mote_picked": 1
+  },
+  "snapshots": {
+    "60": {
+      "player": {
+        "carried": 1
+      },
+      "motes_active": 1,
+      "motes": [
+        {
+          "id": "M1",
+          "pos": [
+            0,
+            3,
+            23.9
+          ],
+          "kind": "random",
+          "ttl_s": null
+        }
+      ]
+    }
+  },
+  "end": {
+    "ticks": 60
+  }
+}

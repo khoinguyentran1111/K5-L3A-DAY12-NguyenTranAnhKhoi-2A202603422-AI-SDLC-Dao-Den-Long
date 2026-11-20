@@ -1,0 +1,37 @@
+{
+  "requirement": "S3 Lướt trên không giữ nguyên độ cao",
+  "why": "Nhảy ở tick 1, y(10) = 0.917. Lướt ở tick 11…22 thì y giữ 0.917, z(20) = 10 × 14/60 = 2.333. Sau đó rơi từ vy = 0: n(n−1)/360 ≥ 0.917 khi n = 19, tiếp đất ở tick 41, z = 2.8.",
+  "args": {
+    "seed": 1,
+    "ticks": 60
+  },
+  "event_counts": {
+    "dash": 1
+  },
+  "snapshots": {
+    "20": {
+      "player": {
+        "pos": [
+          0,
+          0.917,
+          2.333
+        ],
+        "grounded": false
+      }
+    },
+    "50": {
+      "player": {
+        "pos": [
+          0,
+          0,
+          2.8
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 60,
+    "state": "playing"
+  }
+}

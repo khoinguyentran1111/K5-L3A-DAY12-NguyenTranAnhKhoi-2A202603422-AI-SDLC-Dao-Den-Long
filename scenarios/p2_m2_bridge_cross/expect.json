@@ -1,0 +1,28 @@
+{
+  "requirement": "M2 Đi từ đảo A qua cầu tre sang đảo B không rơi",
+  "why": "Bỏ Bùa Gió (charms: []) để tốc độ giữ 6 m/s. x(300) = 25 + 30 = 55: đi qua A (r ≤ 28), cầu x ∈ [26, 44], vào B (cách (70,0) ≤ 28).",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 300
+  },
+  "event_counts": {
+    "player_hit": 0
+  },
+  "snapshots": {
+    "300": {
+      "player": {
+        "pos": [
+          55,
+          0,
+          0
+        ],
+        "grounded": true
+      }
+    }
+  },
+  "end": {
+    "ticks": 300,
+    "state": "playing"
+  }
+}

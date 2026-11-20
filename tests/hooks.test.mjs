@@ -14,7 +14,7 @@ const guard = (file) =>
   });
 
 test('guard blocks editing an existing scenarios/*/expect.json (exit 2)', () => {
-  const r = guard(path.join(ROOT, 'scenarios', 'p1_01_collect_and_light', 'expect.json'));
+  const r = guard(path.join(ROOT, 'scenarios', 'p2_r01_collect_deposit_score', 'expect.json'));
   assert.equal(r.status, 2);
   assert.match(r.stderr, /không được sửa kỳ vọng/);
 });

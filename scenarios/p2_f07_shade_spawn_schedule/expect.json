@@ -1,0 +1,91 @@
+{
+  "requirement": "S11 Đêm 1: 2 Bóng Mực ở tick 300, rồi mỗi 480 tick, tối đa 6; sinh trên 12 điểm r = 37 cách Mây ≥ 15 m; spawning 1 tick; id theo thứ tự sinh",
+  "why": "Tick 300: S1, S2; 780: S3; 1260: S4; 1740: S5; 2220: S6; 2700: đã đủ 6 nên bỏ lượt. Snapshot 300 thấy spawning; snapshot 310 thì cả hai đang wander (cách 37 m > 12).",
+  "args": {
+    "seed": 3,
+    "ticks": 3000
+  },
+  "events": [
+    {
+      "tick": 300,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S1"
+      }
+    },
+    {
+      "tick": 300,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S2"
+      }
+    },
+    {
+      "tick": 780,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S3"
+      }
+    },
+    {
+      "tick": 1260,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S4"
+      }
+    },
+    {
+      "tick": 1740,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S5"
+      }
+    },
+    {
+      "tick": 2220,
+      "name": "shade_spawned",
+      "data": {
+        "id": "S6"
+      }
+    }
+  ],
+  "event_counts": {
+    "shade_spawned": 6
+  },
+  "snapshots": {
+    "290": {
+      "shades": []
+    },
+    "300": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "spawning"
+        },
+        {
+          "id": "S2",
+          "state": "spawning"
+        }
+      ]
+    },
+    "310": {
+      "shades": [
+        {
+          "id": "S1",
+          "state": "wander"
+        },
+        {
+          "id": "S2",
+          "state": "wander"
+        }
+      ]
+    }
+  },
+  "invariants": [
+    "shades_spawn_on_points",
+    "shade_states_valid"
+  ],
+  "end": {
+    "ticks": 3000
+  }
+}

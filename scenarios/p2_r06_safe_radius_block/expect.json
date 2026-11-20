@@ -1,0 +1,36 @@
+{
+  "requirement": "S7 Bóng Mực ngoài vùng an toàn 6 m của đèn đã sáng bị chặn ở mép",
+  "why": "Mây đứng ở chân L1 (đã sáng). S1 cách 11 m ≤ 12 nên đuổi, nhưng bị giữ ở 6.01 m (B12): dừng ở z = 31.01, không bao giờ chạm.",
+  "args": {
+    "seed": 1,
+    "ticks": 600
+  },
+  "event_counts": {
+    "player_hit": 0
+  },
+  "snapshots": {
+    "600": {
+      "player": {
+        "flames": 3
+      },
+      "shades": [
+        {
+          "id": "S1",
+          "pos": [
+            0,
+            1,
+            31.01
+          ],
+          "state": "chase"
+        }
+      ]
+    }
+  },
+  "invariants": [
+    "shades_outside_safe_radius_of_lit_lanterns"
+  ],
+  "end": {
+    "ticks": 600,
+    "state": "playing"
+  }
+}

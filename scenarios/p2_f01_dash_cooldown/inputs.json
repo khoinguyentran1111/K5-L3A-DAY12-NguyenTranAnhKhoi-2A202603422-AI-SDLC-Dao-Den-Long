@@ -1,0 +1,28 @@
+{
+  "frames": [
+    {
+      "tick": 0,
+      "dash": true
+    },
+    {
+      "tick": 1,
+      "dash": false
+    },
+    {
+      "tick": 30,
+      "dash": true
+    },
+    {
+      "tick": 31,
+      "dash": false
+    },
+    {
+      "tick": 100,
+      "dash": true
+    },
+    {
+      "tick": 101,
+      "dash": false
+    }
+  ]
+}

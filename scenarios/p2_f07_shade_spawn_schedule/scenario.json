@@ -1,0 +1,9 @@
+{
+  "random_motes": false,
+  "random_shades": true,
+  "random_drifters": false,
+  "motes": [],
+  "player": {
+    "flames": 99
+  }
+}

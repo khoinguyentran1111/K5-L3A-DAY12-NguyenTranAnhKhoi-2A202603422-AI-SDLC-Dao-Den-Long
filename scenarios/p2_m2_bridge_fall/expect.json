@@ -1,0 +1,25 @@
+{
+  "requirement": "M2 Cầu không có lan can: bước ra khỏi z ∈ [−2, 2] thì rơi",
+  "why": "z(t) = 0.05 + 0.1t; tick 20: z = 2.05 thì rời cầu; rơi 61 tick thì y < −10, tức tick 81.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 120
+  },
+  "events": [
+    {
+      "tick": 81,
+      "name": "player_hit",
+      "data": {
+        "by": "fall",
+        "flames": 2,
+        "dropped": 0,
+        "lost": 0
+      }
+    }
+  ],
+  "end": {
+    "ticks": 120,
+    "state": "playing"
+  }
+}

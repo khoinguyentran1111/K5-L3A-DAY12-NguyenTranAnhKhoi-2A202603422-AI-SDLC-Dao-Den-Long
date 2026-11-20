@@ -1,0 +1,95 @@
+{
+  "requirement": "M2 Đêm 2: 330 s, 6 đèn đúng tọa độ, Bùa C1 ở (35,0,0), xuất phát (0,0,0)",
+  "why": "Chép tọa độ từ Ticket-02 Phần 2.",
+  "args": {
+    "seed": 1,
+    "night": 2,
+    "ticks": 0
+  },
+  "snapshots": {
+    "0": {
+      "night": 2,
+      "time_left_s": 330,
+      "motes_active": 20,
+      "player": {
+        "pos": [
+          0,
+          0,
+          0
+        ],
+        "flames": 3
+      },
+      "lanterns": [
+        {
+          "id": "L1",
+          "pos": [
+            0,
+            0,
+            20
+          ]
+        },
+        {
+          "id": "L2",
+          "pos": [
+            17,
+            0,
+            -10
+          ]
+        },
+        {
+          "id": "L3",
+          "pos": [
+            -17,
+            0,
+            -10
+          ]
+        },
+        {
+          "id": "L4",
+          "pos": [
+            70,
+            0,
+            20
+          ]
+        },
+        {
+          "id": "L5",
+          "pos": [
+            87,
+            0,
+            -10
+          ]
+        },
+        {
+          "id": "L6",
+          "pos": [
+            53,
+            0,
+            -10
+          ]
+        }
+      ],
+      "charms": [
+        {
+          "id": "C1",
+          "pos": [
+            35,
+            0,
+            0
+          ],
+          "available": true,
+          "respawn_s": 0
+        }
+      ],
+      "drifters": [],
+      "shades": []
+    }
+  },
+  "invariants": [
+    "random_motes_on_points_distinct"
+  ],
+  "end": {
+    "ticks": 0,
+    "state": "playing"
+  }
+}
