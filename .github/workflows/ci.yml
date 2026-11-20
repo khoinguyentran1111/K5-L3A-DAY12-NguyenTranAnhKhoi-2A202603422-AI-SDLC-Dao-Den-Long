@@ -1,0 +1,40 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Unit + contract + scenario tests
+        run: npm test
+      - name: Scenario report
+        run: node scripts/scenarios.mjs --out out/scenarios
+      - name: Determinism (same seed twice must be byte-identical)
+        run: |
+          node src/headless.js --seed 7 --night 1 --ticks 18000 --out out/a.jsonl
+          node src/headless.js --seed 7 --night 1 --ticks 18000 --out out/b.jsonl
+          cmp out/a.jsonl out/b.jsonl && echo "IDENTICAL"
+      - name: Tests catch injected bugs
+        run: node scripts/mutation-check.mjs
+      - name: Contract commands from game.contract.json work
+        run: |
+          HCMD=$(node -e "console.log(require('./game.contract.json').headless_cmd)")
+          $HCMD --seed 1 --night 1 --ticks 60 --out out/c.jsonl
+          tail -1 out/c.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headless-out-${{ matrix.os }}
+          path: out/
