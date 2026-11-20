@@ -92,7 +92,7 @@ for (const night of NIGHTS) {
 }
 write('determinism.txt', detText);
 
-// 4. headless performance: a full night must finish in <= 30 s (contract v1.1)
+// 4. headless performance: a full night must finish in <= 30 s (contract v1.1; nights now run to dawn)
 console.log('> perf');
 const perfLines = [];
 for (const night of NIGHTS) {
@@ -130,6 +130,20 @@ const SHOTS = phase === '1'
       ['title', ''],
       ['random_world', '?autostart&seed=42'],
     ]
+  : Number(phase) >= 3
+    ? [
+        ['menu', ''],
+        ['night1', '?autostart&night=1&seed=42'],
+        ['night2', '?autostart&night=2&seed=42'],
+        ['night3', '?autostart&night=3&seed=42'],
+        ['p3_r01_lantern_lit_fuel_bar', '?scenario=p3_r01_collect_deposit_score&until=290&speed=100'],
+        ['p3_05_shade_draining', '?scenario=p3_05_drain_until_out&until=120&speed=20'],
+        ['p3_05_lantern_out_torn', '?scenario=p3_05_drain_until_out&until=300&speed=50'],
+        ['p3_07_refuel_evicts', '?scenario=p3_07_refuel_evicts&until=20&speed=2'],
+        ['p3_14_weak_lantern_no_zone', '?scenario=p3_14_low_fuel_loses_safe_zone&until=60&speed=5'],
+        ['ui_p3_fuel_states', '?scenario=ui_p3_fuel&until=30&speed=1'],
+        ['p2_m3_pad_to_tier2', '?scenario=p2_m3_pad_tower&until=62&speed=10'],
+      ]
   : [
       ['menu', ''],
       ['night1', '?autostart&night=1&seed=42'],

@@ -105,4 +105,7 @@ export const sfx = {
   win: () => [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => tone(f, { dur: 1.0, type: 'triangle', gain: 0.22, delay: i * 0.14 })),
   lose: () => [392, 329.63, 261.63].forEach((f, i) => tone(f, { dur: 0.7, gain: 0.22, delay: i * 0.22 })),
   ui: () => tone(660, { dur: 0.08, type: 'triangle', gain: 0.12 }),
+  refuel: () => [440, 554.37].forEach((f, i) => tone(f, { dur: 0.25, type: 'triangle', gain: 0.2, delay: i * 0.07 })),
+  lanternOut: () => tone(392, { dur: 0.9, gain: 0.22, slideTo: 130 }),
+  lowFuel: () => [880, 660].forEach((f, i) => tone(f, { dur: 0.16, type: 'square', gain: 0.07, delay: i * 0.18 })),
 };

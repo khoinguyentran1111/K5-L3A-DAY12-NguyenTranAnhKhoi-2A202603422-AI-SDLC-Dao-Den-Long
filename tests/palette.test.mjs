@@ -20,6 +20,15 @@ test('every palette entry is within 10 % per RGB channel of the ticket value', (
   }
 });
 
+test('colour-blind palette of Ticket-03 §6: rim/eyes #00B3FF, warnings #FFFFFF, used by the renderer', () => {
+  assert.equal(PALETTE.shadeRimCB, '#00B3FF');
+  assert.equal(PALETTE.uiDangerCB, '#FFFFFF');
+  const code = fs.readFileSync(new URL('../src/web/main.js', import.meta.url), 'utf8');
+  assert.ok(code.includes('PALETTE.shadeRimCB'));
+  const css = fs.readFileSync(new URL('../src/web/style.css', import.meta.url), 'utf8');
+  assert.match(css, /\.cb\s*\{[^}]*--danger:\s*#FFFFFF/i);
+});
+
 test('the 3D renderer actually uses every palette entry (no hard-coded substitutes)', () => {
   const code = ['src/web/main.js', 'src/web/world.js'].map((f) => fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')).join('\n');
   const css = fs.readFileSync(new URL('../src/web/style.css', import.meta.url), 'utf8');

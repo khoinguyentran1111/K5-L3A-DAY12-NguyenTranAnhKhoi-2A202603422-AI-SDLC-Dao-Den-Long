@@ -1,5 +1,5 @@
-// Standard palette of Ticket-02 (Phần 3). Single source for every listed element;
-// tests/palette.test.mjs checks these values against the ticket table.
+// Standard palette of Ticket-02 (Phần 3) + the colour-blind alternatives of Ticket-03 §6.
+// Single source for every listed element; tests/palette.test.mjs checks them against the tickets.
 export const PALETTE = Object.freeze({
   sky: '#0E1430',
   fog: '#1B2350',
@@ -22,4 +22,8 @@ export const PALETTE = Object.freeze({
   drifter: '#8FA3B8',
   uiDanger: '#FF5A5F',
   uiText: '#F5F1E6',
+  // Ticket-03 §6 "Bảng màu dễ phân biệt": shade rim/eyes and UI warnings
+  shadeRimCB: '#00B3FF',
+  uiDangerCB: '#FFFFFF',
+  fuelBar: '#FFB347', // = lanternLit
 });

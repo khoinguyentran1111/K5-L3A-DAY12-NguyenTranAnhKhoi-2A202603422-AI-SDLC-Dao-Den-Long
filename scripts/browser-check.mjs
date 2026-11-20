@@ -233,16 +233,66 @@ try {
   const saved = await evaluate(`${D}.settings`);
   check('volume and mouse sensitivity are saved between sessions', saved && Math.abs(saved.volume - 0.35) < 1e-9 && Math.abs(saved.sensitivity - 1.7) < 1e-9, JSON.stringify(saved));
 
-  // 6. win a night -> result -> next night intro -> Night 2   (F3)
-  await open('?scenario=p2_r05_win_bonus');
-  check('replay p2_r05 wins Night 1 with 478 points like headless', await waitFor(`${D}.game.state === 'won' && ${D}.game.score === 478`));
+  // 5b. Ticket-03 visuals: fuel bar, 1 Hz blinking, no safe ring when weak, deflated + torn unlit
+  //     lantern, drain beam, refuel prompt, capacity bar, colour-blind palette (persisted)
+  await open('?scenario=ui_p3_fuel&live');
+  await waitFor(`${D}.lanternView('L1').fuelBar.visible`, 5000);
+  const lv = async () => evaluate(`(() => { const v = (id) => ${D}.lanternView(id); return {
+    barL2: v('L2').fuelBar.visible, fillL2: +v('L2').barFill.scale.x.toFixed(2), fuelL2: ${D}.game.lanterns[1].fuel / 6000,
+    safeL1: v('L1').safe.visible, safeL2: v('L2').safe.visible, k: v('L1').blinkK,
+    l3: [v('L3').body.scale.x, v('L3').body.scale.y, v('L3').tearGroup.visible, v('L3').fuelBar.visible, v('L3').pips.filter(p => p.visible).length],
+    l2: [v('L2').body.scale.x, v('L2').body.scale.y, v('L2').tearGroup.visible],
+    beam: !!(${D}.shadeView('S1') && ${D}.shadeView('S1').beam.visible), s1: ${D}.game.shades[0].state,
+    prompt: document.getElementById('prompt').textContent,
+    cells: document.querySelectorAll('.mote-cell').length, count: document.querySelector('.mote-count').textContent,
+  }; })()`);
+  const v1 = await lv();
+  check('lit lantern shows a fuel bar matching its fuel (Ticket-03 §1)', v1.barL2 && Math.abs(v1.fillL2 - v1.fuelL2) < 0.02, JSON.stringify(v1));
+  check('weak lantern (fuel < 30) has no safe ring; a strong one keeps it', !v1.safeL1 && v1.safeL2);
+  const ks = new Set();
+  for (let i = 0; i < 14; i++) {
+    ks.add((await lv()).k);
+    await sleep(100);
+  }
+  check('weak lantern blinks (1 Hz)', ks.has(1) && ks.has(0.25), [...ks].join(','));
+  check('unlit lantern is deflated by 20 % and torn; it shows the 5 relight pips (ever lit)', v1.l3[0] === 0.8 && v1.l3[1] === 1 && v1.l3[2] && !v1.l3[3] && v1.l3[4] === 5, JSON.stringify(v1.l3));
+  check('lit lantern is full size and not torn', v1.l2[0] === 1 && v1.l2[1] === 1.25 && !v1.l2[2]);
+  check('draining shade shows a beam to its lantern', v1.beam && v1.s1 === 'drain');
+  check('prompt "E — Châm dầu" next to a lit lantern that is not full', /Châm dầu/.test(v1.prompt), v1.prompt);
+  check('HUD capacity: 12 cells and "carried/capacity" after one successful light (Ticket-03 §4)', v1.cells === 12 && v1.count === '5/12', `${v1.cells} ${v1.count}`);
+  await press('KeyE');
+  // fuel ≈ 79.x when E lands -> used = min(5, ceil(20.x / 10)) = 3, fuel back to 100
+  const refuelOk = await waitFor(`${D}.game.player.carried === 2 && ${D}.game.lanterns[1].fuel > 5900`, 3000);
+  check('E (real key) refuels L2 with 3 motes back to 100', refuelOk, JSON.stringify(await evaluate(`[${D}.game.player.carried, ${D}.game.lanterns[1].fuel]`)));
+  await shot('p3_fuel');
+  await press('Escape');
+  await waitFor(`${D}.screen === 'pause'`);
+  await evaluate("document.getElementById('btnPauseSettings').click()");
+  await waitFor(`${D}.screen === 'settings'`);
+  await evaluate("(() => { const c = document.getElementById('cb'); c.checked = true; c.dispatchEvent(new Event('change')); })()");
+  await send('Page.reload', {});
+  await sleep(500);
+  await waitFor(`!!(window.__ddl && ${D}.shadeView('S1'))`, 30000);
+  const cb = await evaluate(`(() => ({ saved: ${D}.settings.colorblind, body: document.body.classList.contains('cb'),
+    rim: '#' + ${D}.shadeView('S1').rimMat.color.getHexString(), eye: '#' + ${D}.shadeView('S1').eyeMat.color.getHexString(),
+    danger: getComputedStyle(document.body).getPropertyValue('--danger').trim() }))()`);
+  check('colour-blind palette is saved and applied: rim/eyes #00B3FF, warnings #FFFFFF (Ticket-03 §6)', cb.saved && cb.body && cb.rim === '#00b3ff' && cb.eye === '#00b3ff' && /^#fff(fff)?$/i.test(cb.danger), JSON.stringify(cb));
+  await shot('p3_colorblind');
+  await evaluate(`(() => { const s = ${D}.settings; s.colorblind = false; localStorage.setItem('dao-den-long.settings.v1', JSON.stringify(s)); })()`);
+
+  // 6. win a night at dawn -> result -> next night intro -> Night 2   (F3, Ticket-03 §3)
+  await open('?scenario=p3_08_dawn_win_night1');
+  check('replay p3_08 wins Night 1 at dawn with 447 points like headless', await waitFor(`${D}.game.state === 'won' && ${D}.game.reason === 'dawn_survived' && ${D}.game.score === 447`));
+  await open('?scenario=ui_n1_dawn');
   check('ambient light reaches 0.7 when every lantern is lit (F9)', await waitFor(`Math.abs(${D}.ambient - 0.7) < 1e-9`, 3000));
-  check('result screen after a won night offers "Đêm kế tiếp"', await waitFor(`${D}.screen === 'result' && !!document.getElementById('btnNext')`));
-  await shot('p2_result_won');
+  check('all lanterns lit does not end the night early', (await evaluate(`${D}.game.state`)) === 'playing');
+  check('result screen after a won night offers "Đêm kế tiếp"', await waitFor(`${D}.screen === 'result' && ${D}.game.reason === 'dawn_survived' && !!document.getElementById('btnNext')`));
+  await shot('p3_result_won');
+  const n1 = await evaluate(`${D}.game.score`);
   await evaluate("document.getElementById('btnNext').click()");
   check('-> intro of Night 2 (Đảo Cau)', await waitFor(`${D}.screen === 'intro' && /Đảo Cau/.test(document.getElementById('card').textContent)`));
   await press('Enter');
-  check('-> playing Night 2 with 6 lanterns, total score carried over', await waitFor(`${D}.mode === 'playing' && ${D}.game.night === 2 && ${D}.game.lanterns.length === 6 && ${D}.campaign.total === 478`));
+  check('-> playing Night 2 with 6 lanterns, total score carried over', await waitFor(`${D}.mode === 'playing' && ${D}.game.night === 2 && ${D}.game.lanterns.length === 6 && ${D}.campaign.total === ${n1}`));
   await shot('p2_night2');
 
   // 7. lose -> retry the same night

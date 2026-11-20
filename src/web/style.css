@@ -82,3 +82,15 @@ html, body { margin: 0; height: 100%; background: var(--sky); color: var(--text)
 .row label { width: 150px; }
 .row input[type=range] { flex: 1; accent-color: var(--lit); }
 .hint { opacity: .7; font-size: 13px; }
+
+/* Ticket-03: lantern count vs the dawn threshold, capacity counter, weak-lantern arrow */
+.stat.lamps .need { font-size: 13px; font-weight: 600; opacity: .8; }
+.stat.lamps.short #lamps { color: var(--danger); }
+.mote-bar { align-items: center; flex-wrap: wrap; max-width: 470px; justify-content: center; }
+.mote-count { margin-left: 6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.arrow.weak { color: var(--danger); text-shadow: 0 0 10px var(--danger); }
+
+/* Ticket-03 §6 "Bảng màu dễ phân biệt": warnings become white with a ⚠ sign */
+.cb { --danger: #FFFFFF; --rim: #00B3FF; }
+.cb .clock.danger::before, .cb .stat.lamps.short #lamps::before, .cb .arrow.weak::before { content: "⚠ "; }
+.cb .arrow.weak { font-size: 22px; }

@@ -162,7 +162,32 @@ function buildLantern(tuning) {
     pips.push(pip);
     g.add(pip);
   }
-  g.add(post, cap, body, core, light, safe);
-  g.userData = { bodyMat, coreMat, light, safe, pips, glow: 0 };
+  // Ticket-03 §6: an unlit lantern is told apart without colour: torn paper (dark jagged
+  // patches on both sides) + the body deflated by 20 % (scale set in main.js).
+  const tearShape = new THREE.Shape();
+  [[0, 0.2], [0.08, 0.05], [0.2, 0.1], [0.1, -0.04], [0.16, -0.2], [0, -0.1], [-0.14, -0.22], [-0.09, -0.03], [-0.2, 0.06], [-0.06, 0.07]]
+    .forEach(([x, y], i) => (i ? tearShape.lineTo(x, y) : tearShape.moveTo(x, y)));
+  const tearMat = new THREE.MeshBasicMaterial({ color: PALETTE.sky, side: THREE.DoubleSide });
+  const tears = [0.41, -0.41].map((z, i) => {
+    const t = new THREE.Mesh(new THREE.ShapeGeometry(tearShape), tearMat);
+    t.position.set(i ? -0.12 : 0.1, 0.05, z);
+    if (i) t.rotation.y = Math.PI;
+    return t;
+  });
+  const tearGroup = new THREE.Group();
+  tearGroup.add(...tears);
+  tearGroup.position.y = 3.6;
+  // Ticket-03 §1: fuel bar above a lit lantern (billboard: main.js turns it to the camera)
+  const fuelBar = new THREE.Group();
+  const barBg = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.2), new THREE.MeshBasicMaterial({ color: PALETTE.sky, transparent: true, opacity: 0.75, depthWrite: false }));
+  const barFill = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.12), new THREE.MeshBasicMaterial({ color: PALETTE.fuelBar, depthWrite: false }));
+  barFill.position.z = 0.01;
+  barFill.geometry.translate(0.7, 0, 0); // grows from the left edge
+  barFill.position.x = -0.7;
+  fuelBar.add(barBg, barFill);
+  fuelBar.position.y = 5.0;
+  fuelBar.visible = false;
+  g.add(post, cap, body, core, light, safe, tearGroup, fuelBar);
+  g.userData = { bodyMat, coreMat, light, safe, pips, glow: 0, body, tearGroup, fuelBar, barFill, safeMat: safe.material };
   return g;
 }
