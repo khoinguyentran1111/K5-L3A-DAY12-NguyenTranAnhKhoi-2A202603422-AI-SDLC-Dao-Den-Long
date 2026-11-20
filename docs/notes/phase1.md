@@ -62,8 +62,8 @@ Số tuning (`game.contract.json`): tốc độ 6 m/s, mang tối đa 8, đèn c
 - Bản 3D: chế độ replay `?scenario=` phát lại đúng file headless để chụp ảnh tái lập được.
 
 ## 5. Đánh giá Phase 1
-- **Đạt (có bằng chứng):** R1–R8, R5b, R11, C1–C7. Chi tiết trong [bảng truy vết](../proof/phase1.md).
-- **Kiểm tra một phần:** R9 HUD và R11 phong cách chỉ có ảnh chụp, không có test tự động. R10 chơi lại: có code và màn kết thúc trong ảnh, nhưng chưa có kiểm tra tự động bấm phím; cần chơi thử và quay trong video.
+- **Đạt (có bằng chứng):** R1–R10, R5b, R11, C1–C7. Chi tiết trong [bảng truy vết](../proof/phase1.md). R9 và R10 được kiểm tra end-to-end trên trình duyệt thật (`scripts/browser-check.mjs`, 13 check).
+- **Kiểm tra một phần:** R11 phong cách chỉ đánh giá bằng mắt qua ảnh chụp.
 - **Chưa xác minh:** D1 trên macOS/Linux thật. CI (ubuntu + macos) đã cấu hình nhưng chỉ chạy sau khi push; máy làm bài là Windows.
 - **Lỗi tìm được nhờ kiểm chứng:** (1) Bóng Mực đứng đúng 6.0000001 m, output làm tròn thành 6.000 và bị tính là "trong bán kính": scenario p1_06 bắt được, đã sửa bằng biên an toàn. (2) Test chưa phân biệt được floor và ceil khi đánh rơi đom đóm: mutation check bắt được, đã thêm test với số lẻ.
 - **Hồi quy:** đây là phase đầu, chưa có phase trước.

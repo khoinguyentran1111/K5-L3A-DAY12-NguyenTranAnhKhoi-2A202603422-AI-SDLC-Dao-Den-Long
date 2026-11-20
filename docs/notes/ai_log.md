@@ -24,6 +24,8 @@ Công cụ: **Claude Code** (extension VS Code, model Claude Opus 5.5) và một
 | 4 | Agent định "chuẩn hóa line ending" bằng `git reset --hard`, lệnh sẽ xóa thay đổi chưa commit | Bộ phân loại an toàn của Claude Code chặn lại | Dùng cách không phá dữ liệu (`sed` bỏ `\r`) + thêm `.gitattributes`; quy tắc "không lệnh git phá dữ liệu" |
 | 5 | Mutation check báo SKIP vì mẫu tìm có `\n` trong khi file đang là CRLF | Output của script | Đổi mẫu không phụ thuộc xuống dòng; ghi bẫy CRLF vào AGENTS.md |
 | 6 | Ảnh chụp headless chỉ chạy khoảng 1 s gameplay vì Chrome headless gần như không chạy `requestAnimationFrame` | Xem ảnh: HUD vẫn hiện 4:59 | Thêm `?speed=N` (tua nhanh) cho chế độ replay; luật vẫn chạy qua cùng hàm `step` |
+| 8 | Check "bấm R sau khi thắng thì chơi lại" ban đầu viết điều kiện `tick <= 1`, mà scenario thắng ngay ở tick 1, nên check đúng cả khi chưa bấm R (test giả) | Tự đọc lại điều kiện sau khi thấy PASS "quá dễ" | Thêm bộ đếm `gamesStarted` và kiểm tra nó tăng đúng 1; thêm check ngược "phím khác không khởi động lại" |
+| 9 | Kiểm tra trình duyệt báo lỗi console: thiếu `favicon.ico` (lỗi thật) và 404 `inputs.json` của scenario không có inputs (hợp lệ theo contract) | `scripts/browser-check.mjs` | Thêm favicon inline; chỉ bỏ qua đúng mẫu 404 của file inputs tùy chọn, ghi rõ lý do trong code |
 | 7 | Số đo hiệu năng ban đầu vô nghĩa: người chơi đứng yên nên thua sau khoảng 500 tick | Đọc `perf.txt` | Đo bằng workload "đêm dài" 18000 tick (lửa rất lớn, chạy vòng, tỏa sáng định kỳ) |
 
 ### Token và chi phí (ước tính)
