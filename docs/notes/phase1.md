@@ -64,7 +64,7 @@ Số tuning (`game.contract.json`): tốc độ 6 m/s, mang tối đa 8, đèn c
 ## 5. Đánh giá Phase 1
 - **Đạt (có bằng chứng):** R1–R10, R5b, R11, C1–C7. Chi tiết trong [bảng truy vết](../proof/phase1.md). R9 và R10 được kiểm tra end-to-end trên trình duyệt thật (`scripts/browser-check.mjs`, 13 check).
 - **Kiểm tra một phần:** R11 phong cách chỉ đánh giá bằng mắt qua ảnh chụp.
-- **Chưa xác minh:** D1 trên macOS/Linux thật. CI (ubuntu + macos) đã cấu hình nhưng chỉ chạy sau khi push; máy làm bài là Windows.
+- **D1 macOS/Linux:** ở commit của tag `phase-1` (`bd61a58`), CI cho thấy test, scenario và tất định **đạt trên Ubuntu**, nhưng job bị đỏ vì lỗi trong chính script kiểm chứng (mutation check đọc sai định dạng TAP của Node 20; browser check cần `WebSocket` của Node 22). Game và headless không bị ảnh hưởng. Đã sửa sau tag (`f192bab`…`1c214f9`); CI xanh trên Ubuntu Node 20/22 và macOS Node 22. Không dời tag vì Phase 2 đã phát hành (quá hạn Phase 1).
 - **Lỗi tìm được nhờ kiểm chứng:** (1) Bóng Mực đứng đúng 6.0000001 m, output làm tròn thành 6.000 và bị tính là "trong bán kính": scenario p1_06 bắt được, đã sửa bằng biên an toàn. (2) Test chưa phân biệt được floor và ceil khi đánh rơi đom đóm: mutation check bắt được, đã thêm test với số lẻ.
 - **Hồi quy:** đây là phase đầu, chưa có phase trước.
 - **Harness đã chỉnh:** thêm `.gitattributes` (CRLF làm hỏng mutation check); thêm hook chặn sửa `expect.json` và hook Stop chặn kết thúc khi test đỏ; ghi bẫy làm tròn vào AGENTS.md.
