@@ -50,7 +50,10 @@ test('server: saved scores persist on disk across restarts; --export-leaderboard
   const startServer = async () => {
     const port = 6100 + Math.floor(Math.random() * 800);
     const srv = spawn(process.execPath, ['scripts/serve.mjs'], { cwd: ROOT, env: { ...env, PORT: String(port) } });
-    await new Promise((r) => srv.stdout.once('data', r));
+    await new Promise((res, rej) => {
+      srv.stdout.once('data', res);
+      srv.once('exit', (code) => rej(new Error(`server exited (${code}) before listening`))); // never hang
+    });
     return { srv, url: `http://127.0.0.1:${port}/api/leaderboard` };
   };
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });

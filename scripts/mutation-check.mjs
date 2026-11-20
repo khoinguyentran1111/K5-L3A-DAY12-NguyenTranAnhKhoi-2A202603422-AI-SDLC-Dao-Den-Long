@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-mutation-'));
-for (const p of ['src', 'tests', 'scenarios', 'scripts', '.claude', 'game.contract.json', 'package.json']) {
+for (const p of ['src', 'tests', 'scenarios', 'scripts', '.claude', 'game.contract.json', 'package.json', 'node_modules/three/build/three.module.js']) {
   if (fs.existsSync(path.join(REPO, p))) fs.cpSync(path.join(REPO, p), path.join(ROOT, p), { recursive: true });
 }
 const FILE = path.join(ROOT, 'src/core/sim.js');
