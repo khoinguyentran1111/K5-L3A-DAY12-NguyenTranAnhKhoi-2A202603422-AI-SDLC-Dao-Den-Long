@@ -1,0 +1,15 @@
+{
+  "requirement": "R7 thắp hết đèn thì thắng; R8 điểm: dựng scenario không cộng điểm; thắng thì cộng per_second_left*floor(time_left) + per_flame_left*flames",
+  "why": "Tick 0 score 0 dù 4 đèn đặt sẵn lit. Nạp 2 vào L5 (3+2=5) -> thắp -> thắng ở tick 1. Điểm = 100 + 1*floor(100-1/60)=99 + 50*3 = 349.",
+  "args": { "seed": 1, "ticks": 100 },
+  "events": [
+    { "tick": 1, "name": "deposit", "data": { "lantern_id": "L5", "amount": 2, "deposited": 5 } },
+    { "tick": 1, "name": "lantern_lit", "data": { "lantern_id": "L5" } },
+    { "tick": 1, "name": "game_over", "data": { "result": "won", "reason": "all_lit" } }
+  ],
+  "event_counts": { "lantern_lit": 1 },
+  "snapshots": {
+    "0": { "score": 0, "state": "playing" }
+  },
+  "end": { "ticks": 1, "state": "won", "score": 349 }
+}

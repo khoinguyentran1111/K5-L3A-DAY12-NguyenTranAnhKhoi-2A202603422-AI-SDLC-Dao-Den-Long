@@ -1,0 +1,19 @@
+{
+  "requirement": "R3 nhặt đom đóm (pickup_radius 1.2, 6 m/s) + R4 nạp đủ lantern_cost=5 để thắp L1; điểm per_mote/per_lantern",
+  "why": "z sau bước k = 0.1(k+1). Đom đóm z=3.05 nhặt khi z>=1.85 -> tick 19; các con sau cách 30 tick. Đi 230 bước -> z=23, cách L1 2 m <= interact_radius 2.5. Interact ở tick 235 -> sự kiện tick 236. Điểm = 5*10 + 100 = 150.",
+  "args": { "seed": 1, "ticks": 300 },
+  "events": [
+    { "tick": 19,  "name": "mote_picked", "data": { "carried": 1 } },
+    { "tick": 49,  "name": "mote_picked", "data": { "carried": 2 } },
+    { "tick": 79,  "name": "mote_picked", "data": { "carried": 3 } },
+    { "tick": 109, "name": "mote_picked", "data": { "carried": 4 } },
+    { "tick": 139, "name": "mote_picked", "data": { "carried": 5 } },
+    { "tick": 236, "name": "deposit", "data": { "lantern_id": "L1", "amount": 5, "deposited": 5 } },
+    { "tick": 236, "name": "lantern_lit", "data": { "lantern_id": "L1" } }
+  ],
+  "event_counts": { "mote_picked": 5, "deposit": 1, "lantern_lit": 1, "game_over": 0 },
+  "snapshots": {
+    "300": { "state": "playing", "score": 150, "player": { "pos": [0, 0, 23], "carried": 0, "flames": 3 }, "motes_active": 0 }
+  },
+  "end": { "ticks": 300, "state": "playing", "score": 150 }
+}

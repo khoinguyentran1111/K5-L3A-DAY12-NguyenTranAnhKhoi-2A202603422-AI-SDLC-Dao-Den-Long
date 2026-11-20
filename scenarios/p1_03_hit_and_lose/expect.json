@@ -1,0 +1,14 @@
+{
+  "requirement": "R5 Bóng Mực đuổi, chạm thì mất máu (shade_hit_radius 1.0) và rơi hit_drop_ratio=0.5 số đom đóm; R7 hết máu thì thua",
+  "why": "Không có inputs = đứng yên. Bóng Mực đi 3.5/60 m/tick từ x=3; chạm khi x <= 1 -> cần 2/(3.5/60)=34.29 -> bước thứ 35 -> tick 35. dropped = floor(4*0.5) = 2, rơi lại trên đảo thành 2 đom đóm. flames 1 -> 0 -> thua no_flames ở tick 35. Bóng Mực không có id trong scenario -> id tự sinh S1.",
+  "args": { "seed": 1, "ticks": 600, "snapshot_every": 5 },
+  "events": [
+    { "tick": 35, "name": "player_hit", "data": { "by": "shade", "flames": 0, "dropped": 2 } },
+    { "tick": 35, "name": "game_over", "data": { "result": "lost", "reason": "no_flames" } }
+  ],
+  "event_counts": { "player_hit": 1, "game_over": 1 },
+  "snapshots": {
+    "35": { "state": "lost", "player": { "flames": 0, "carried": 2 }, "motes_active": 2, "shades": [{ "id": "S1", "state": "chase" }] }
+  },
+  "end": { "ticks": 35, "state": "lost", "score": 0 }
+}

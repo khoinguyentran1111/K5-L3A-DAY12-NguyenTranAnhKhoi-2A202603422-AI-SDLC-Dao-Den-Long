@@ -1,0 +1,13 @@
+{
+  "requirement": "R7 hết đêm (bình minh) mà chưa thắp hết đèn thì thua; time_left_s = thời lượng - số bước/60",
+  "why": "time_left_s 2 -> 120 bước. Dừng ở tick 120 dù --ticks 500.",
+  "args": { "seed": 1, "ticks": 500 },
+  "events": [
+    { "tick": 120, "name": "game_over", "data": { "result": "lost", "reason": "dawn" } }
+  ],
+  "snapshots": {
+    "60":  { "time_left_s": 1, "state": "playing" },
+    "120": { "time_left_s": 0, "state": "lost" }
+  },
+  "end": { "ticks": 120, "state": "lost", "score": 0 }
+}

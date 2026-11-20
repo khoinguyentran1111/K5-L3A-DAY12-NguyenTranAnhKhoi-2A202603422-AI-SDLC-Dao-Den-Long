@@ -1,0 +1,11 @@
+{
+  "requirement": "R5b Bóng Mực sợ đèn: không vào được safe_radius=6 quanh đèn ĐÃ THẮP (giả định A6)",
+  "why": "Người chơi đứng ngay chân L1 (0,0,25) đã thắp. S1 đuổi từ z=38 nhưng bị giữ ở khoảng cách 6.01 (> 6) -> dừng ở z=31.01, không bao giờ chạm.",
+  "args": { "seed": 1, "ticks": 600 },
+  "event_counts": { "player_hit": 0 },
+  "snapshots": {
+    "600": { "player": { "flames": 3 }, "shades": [{ "id": "S1", "pos": [0, 1, 31.01], "state": "chase" }] }
+  },
+  "invariants": ["shades_outside_safe_radius_of_lit_lanterns"],
+  "end": { "ticks": 600, "state": "playing" }
+}

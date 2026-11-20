@@ -1,0 +1,11 @@
+{
+  "requirement": "R1 di chuyển theo hướng camera (contract C) + nhảy",
+  "why": "yaw 90, move [0,1] -> hướng +X, 6 m/s trong 1 s = 6 m. Nhảy vy=7, g=20, bước bán ẩn: y(10) = (7*10 - (1/3)*45)/60 = 0.917; tiếp đất sau khoảng 42 tick.",
+  "args": { "seed": 1, "ticks": 120 },
+  "snapshots": {
+    "10":  { "player": { "pos": [1, 0.917, 0] } },
+    "60":  { "player": { "pos": [6, 0, 0] } },
+    "120": { "player": { "pos": [6, 0, 0] } }
+  },
+  "end": { "ticks": 120, "state": "playing", "score": 0 }
+}

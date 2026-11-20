@@ -1,0 +1,15 @@
+{
+  "requirement": "R6 tỏa sáng xua Bóng Mực: tốn pulse_cost=2, choáng pulse_stun_s=3 (180 tick), đẩy pulse_push_m=4; không đủ ánh sáng thì không tỏa sáng",
+  "why": "S1 cách 5 m <= pulse_radius 6 -> bị choáng và đẩy ra x=9. carried 3 -> 1. Lần nhấn ở tick 60 đã hết cooldown nhưng carried 1 < 2 nên không có pulse. Choáng ở snapshot 1..180; từ bước 180 đuổi 3.5/60 m/tick -> snapshot 190: x = 9 - 10*3.5/60 = 8.417.",
+  "args": { "seed": 1, "ticks": 300 },
+  "events": [
+    { "tick": 1, "name": "pulse", "data": { "stunned_ids": ["S1"] } }
+  ],
+  "event_counts": { "pulse": 1, "player_hit": 0 },
+  "snapshots": {
+    "10":  { "score": 20, "player": { "carried": 1 }, "shades": [{ "id": "S1", "pos": [9, 1, 0], "state": "stunned" }] },
+    "180": { "shades": [{ "id": "S1", "pos": [9, 1, 0], "state": "stunned" }] },
+    "190": { "shades": [{ "id": "S1", "pos": [8.417, 1, 0], "state": "chase" }] }
+  },
+  "end": { "ticks": 300, "state": "playing", "score": 20 }
+}
