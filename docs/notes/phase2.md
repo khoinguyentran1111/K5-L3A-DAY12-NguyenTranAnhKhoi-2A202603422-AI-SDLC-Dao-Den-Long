@@ -100,4 +100,15 @@ Test Phase 1 bị ticket thay luật được **chuyển sang `scenarios/obsolet
 - Bản 3D: `browser-check` mở rộng cho chuỗi Đêm, tạm dừng, cài đặt, HUD, và đo FPS.
 
 ## 5. Đánh giá Phase 2
-_(cập nhật sau khi kiểm chứng)_
+- **Đạt (có bằng chứng):** mọi mục S1–S15, M1–M3, F1–F9, Contract v1.1 và DoD. Chi tiết trong [bảng truy vết](../proof/phase2.md).
+- **Kiểm chứng yếu hơn:** F6 âm thanh và cảnh báo gió bằng lá bay chỉ có review code (WebAudio không kiểm tra tự động được), sẽ nghe thử trong video. FPS ≥ 30 đo được trên GPU của máy làm bài (RTX 3050 Laptop, khoảng 61 FPS), chưa đo trên máy chấm.
+- **Hồi quy Phase 1:** Ticket-02 thay số liệu và đổi một số luật (điểm cộng lúc nạp thay vì lúc nhặt; tỏa sáng 3D; rơi khỏi đảo…), nên 7 scenario `p1_*` không còn đúng. Chúng được chuyển sang `scenarios/obsolete-v1.0/` kèm bảng lý do, và hành vi tương ứng được kiểm chứng lại bằng `p2_r01`…`p2_r07` theo số chuẩn. Phần còn đúng (mô hình tick, làm tròn, mã thoát, tất định, chuẩn hóa vector) vẫn nằm trong contract test và unit test.
+- **Lỗi tìm được nhờ kiểm chứng** (chi tiết ở [ai_log](ai_log.md)):
+  - `--night` bị bỏ qua (cả 3 Đêm cùng kết thúc ở tick 17479): phát hiện nhờ chạy thử cả 3 Đêm.
+  - Hai phép tính tay sai (hồi chiêu lướt; scenario cây cầu quên tắt Bùa Gió): phát hiện khi đối chiếu với output.
+  - Ba test thiết kế sai (đếm TTL lệch 1, test ưu tiên no_flames mâu thuẫn với luật đẩy khỏi vùng an toàn, test hook trỏ tới file đã chuyển chỗ).
+  - Mutation check phát hiện một test bị sót khi viết lại (vector ngắn không được chuẩn hóa).
+  - Bài kiểm tra trình duyệt phụ thuộc FPS (lướt chưa xong mà đã dịch chuyển Mây; góc camera tính theo thời gian, sai hình học).
+  - Camera bị tháp chuông che khi Mây đứng phía bắc tháp: phát hiện nhờ ảnh chụp bằng chứng.
+- **Harness đã chỉnh:** AGENTS.md (12 bước, maps, quy ước scenario v1.1, `obsolete-*`, `ui_*`, các bẫy mới), skill `verify-phase` (3 Đêm, `--gpu`), skill `new-scenario` (trường v1.1, `approx`, các bất biến), `contract-reviewer` (đối chiếu thứ tự 12 bước); `browser-check` có chế độ GPU và annotation lỗi cho CI.
+- **Rủi ro cho test ẩn:** B2 (Đêm 3 xuất phát (0,0,−30)), B6/B7 (Bóng Mực lơ lửng 1 m, chỉ bay trên đất), B8 (`spawning` 1 tick), B15 (vị trí lúc chờ hồi sinh), B16 (điểm khi thua), B17 (`night_start` ở tick 0). Nên hỏi trợ giảng Phase 2 các điểm này.
