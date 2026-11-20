@@ -36,6 +36,8 @@ let failed = 0;
 const check = (name, ok, detail = '') => {
   if (!ok) failed++;
   log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
+  // On GitHub Actions, surface failures as annotations (readable without downloading logs).
+  if (!ok && process.env.GITHUB_ACTIONS) console.log(`::error title=browser-check::${name} ${detail}`.replace(/\n/g, ' '));
 };
 
 const port = 5600 + Math.floor(Math.random() * 300);
@@ -43,10 +45,13 @@ const dbg = 9400 + Math.floor(Math.random() * 300);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ddl-browser-'));
 const server = spawn(process.execPath, ['scripts/serve.mjs'], { cwd: ROOT, env: { ...process.env, PORT: String(port), NO_OPEN: '1' } });
 await new Promise((r) => server.stdout.once('data', r));
-const chrome = spawn(browserPath, [
-  '--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--hide-scrollbars',
-  '--window-size=1280,720', `--remote-debugging-port=${dbg}`, `--user-data-dir=${tmp}`, 'about:blank',
-], { stdio: 'ignore' });
+const flags = [
+  '--headless=new', '--enable-unsafe-swiftshader', '--hide-scrollbars', '--no-first-run',
+  '--window-size=1280,720', `--remote-debugging-port=${dbg}`, `--user-data-dir=${tmp}`,
+];
+if (process.platform !== 'darwin') flags.push('--use-angle=swiftshader'); // software WebGL (no GPU needed)
+if (process.platform === 'linux') flags.push('--no-sandbox'); // Ubuntu 24.04 CI blocks Chrome's user-namespace sandbox
+const chrome = spawn(browserPath, [...flags, 'about:blank'], { stdio: 'ignore' });
 
 async function cleanup() {
   chrome.kill();
@@ -61,7 +66,7 @@ async function cleanup() {
 
 try {
   let targets = null;
-  for (let i = 0; i < 50 && !targets; i++) {
+  for (let i = 0; i < 100 && !targets; i++) {
     try {
       targets = await (await fetch(`http://127.0.0.1:${dbg}/json/list`)).json();
     } catch {
@@ -130,20 +135,31 @@ try {
 
   // 1. Title screen -> Enter starts a game (R10 start)
   await send('Page.navigate', { url: `http://localhost:${port}/` });
-  await waitFor('!!window.__ddl');
+  const loaded = await waitFor('!!window.__ddl', 30000);
+  const webgl = await evaluate("!!document.createElement('canvas').getContext('webgl2')");
+  check('page loads and WebGL is available', loaded && webgl, `loaded=${loaded} webgl2=${webgl} errors=${consoleErrors.slice(0, 2).join(' | ')}`);
+  if (!loaded) throw new Error('client did not start');
   check('title screen shown, no game yet', await evaluate("window.__ddl.mode === 'title' && !document.getElementById('overlay').hidden"));
   await hold('Enter', 50);
   check('Enter starts a game', await waitFor("window.__ddl.mode === 'playing' && window.__ddl.game.state === 'playing'"));
 
   // 2. Keyboard movement through the real input mapping (yaw 0: W = +Z, D = screen-right = -X)
   await open('?autostart&seed=3');
+  // Hold a key until Mây has moved far enough (slow CI renderers run fewer ticks per second).
+  const moveWhile = async (code, cond) => {
+    await key(code, 'keyDown');
+    const ok = await waitFor(cond, 10000);
+    await key(code, 'keyUp');
+    await sleep(100);
+    return ok;
+  };
   const p0 = await evaluate('({...window.__ddl.game.player})');
-  await hold('KeyW', 800);
+  const wOk = await moveWhile('KeyW', `window.__ddl.game.player.z - ${p0.z} > 1.5`);
   const p1 = await evaluate('({...window.__ddl.game.player})');
-  check('W moves Mây forward (+Z)', p1.z - p0.z > 1.5 && Math.abs(p1.x - p0.x) < 0.3, `dz=${(p1.z - p0.z).toFixed(2)} dx=${(p1.x - p0.x).toFixed(2)}`);
-  await hold('KeyD', 500);
+  check('W moves Mây forward (+Z)', wOk && Math.abs(p1.x - p0.x) < 0.3, `dz=${(p1.z - p0.z).toFixed(2)} dx=${(p1.x - p0.x).toFixed(2)}`);
+  const dOk = await moveWhile('KeyD', `window.__ddl.game.player.x - ${p1.x} < -1`);
   const p2 = await evaluate('({...window.__ddl.game.player})');
-  check('D moves Mây to screen-right (-X at yaw 0)', p2.x - p1.x < -1, `dx=${(p2.x - p1.x).toFixed(2)}`);
+  check('D moves Mây to screen-right (-X at yaw 0)', dOk && Math.abs(p2.z - p1.z) < 0.3, `dx=${(p2.x - p1.x).toFixed(2)} dz=${(p2.z - p1.z).toFixed(2)}`);
   await key('Space', 'keyDown');
   const jumped = await waitFor('window.__ddl.game.player.y > 0.3', 2000);
   await key('Space', 'keyUp');
