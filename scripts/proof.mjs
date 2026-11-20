@@ -8,6 +8,7 @@
 //   perf.txt          headless speed for a full night, with machine config
 //   mutation.txt      injected bugs that the test suite must catch
 //   screenshots/*.png 3D client replaying scenarios (only if Chrome/Edge is found)
+//   browser-check.txt end-to-end test of the 3D client (keys, HUD, replay)  (needs Chrome/Edge)
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -143,6 +144,13 @@ if (!browser) {
   }
   server.kill();
 }
+
+// 7. end-to-end check of the 3D client (real key presses, HUD, replay after win/lose)
+console.log('> browser check');
+const bc = node(['scripts/browser-check.mjs', '--shots', path.join(OUT, 'screenshots')], { timeout: 300000 });
+write('browser-check.txt', header + bc.stdout + bc.stderr);
+console.log(`  ${bc.status === 3 ? 'skipped (no browser)' : bc.stdout.trim().split('\n').at(-1)}`);
+
 fs.rmSync(tmp, { recursive: true, force: true });
 console.log(`\nEvidence written to ${path.relative(ROOT, OUT)}/`);
-process.exitCode = t.status === 0 && a.hash === b.hash && m.status === 0 ? 0 : 1;
+process.exitCode = t.status === 0 && a.hash === b.hash && m.status === 0 && [0, 3].includes(bc.status) ? 0 : 1;

@@ -28,6 +28,8 @@ jobs:
           cmp out/a.jsonl out/b.jsonl && echo "IDENTICAL"
       - name: Tests catch injected bugs
         run: node scripts/mutation-check.mjs
+      - name: 3D client end-to-end (headless Chrome; exit 3 = no browser, skipped)
+        run: node scripts/browser-check.mjs --out out/browser-check.txt || [ $? -eq 3 ]
       - name: Contract commands from game.contract.json work
         run: |
           HCMD=$(node -e "console.log(require('./game.contract.json').headless_cmd)")

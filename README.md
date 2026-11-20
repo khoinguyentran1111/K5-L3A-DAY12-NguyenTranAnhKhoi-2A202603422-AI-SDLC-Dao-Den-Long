@@ -62,6 +62,7 @@ Mọi số trong `tuning` là số game đang dùng: `src/core/sim.js` đọc tr
 npm test                          # 40 test: unit + contract (hộp đen CLI) + scenario + hook
 node scripts/scenarios.mjs        # chạy các scenario headless, so với kỳ vọng tính tay
 node scripts/mutation-check.mjs   # gài 10 lỗi vào sim, test phải bắt được cả 10
+node scripts/browser-check.mjs    # kiểm tra bản 3D trên Chrome/Edge headless: phím, HUD, chơi lại, lỗi console
 npm run proof -- --phase 1        # sinh lại toàn bộ bằng chứng vào docs/proof/phase1/
 ```
 

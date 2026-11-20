@@ -213,6 +213,7 @@ scene.add(pulseRing);
 
 // ---------- game session ----------
 let g = null;
+let gamesStarted = 0;
 let mode = 'title'; // title | playing | over
 const lanternViews = new Map();
 const moteViews = new Map();
@@ -251,6 +252,7 @@ function replayInput() {
 }
 
 function newGame() {
+  gamesStarted++;
   clearDynamic();
   const seed = params.has('seed') ? Number(params.get('seed')) : (Date.now() ^ (Math.random() * 1e9)) >>> 0;
   if (replay) {
@@ -536,4 +538,4 @@ requestAnimationFrame(frame);
 if (params.has('autostart') || replay) newGame();
 
 // Small debug hook (used for screenshots / manual checks in the console).
-window.__ddl = { get game() { return g; }, get mode() { return mode; }, newGame };
+window.__ddl = { get game() { return g; }, get mode() { return mode; }, get gamesStarted() { return gamesStarted; }, newGame };
