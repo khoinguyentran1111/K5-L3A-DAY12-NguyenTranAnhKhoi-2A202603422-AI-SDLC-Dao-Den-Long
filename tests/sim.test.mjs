@@ -135,6 +135,13 @@ test('dropped motes land back on the island and keep the total conserved', () =>
   for (const m of g.motes) assert.ok(Math.hypot(m.x, m.z) <= WORLD.islandRadius + 1e-9);
 });
 
+test('dropped = floor(carried * hit_drop_ratio) for odd counts (assumption A8)', () => {
+  const g = game({ player: { carried: 3 }, shades: [{ pos: [0.5, 0, 0] }] });
+  const hit = run(g, 1).find((e) => e.name === 'player_hit');
+  assert.equal(hit.data.dropped, Math.floor(3 * tuning.hit_drop_ratio));
+  assert.equal(g.player.carried, 3 - Math.floor(3 * tuning.hit_drop_ratio));
+});
+
 test('random mode spawns shades over time with shade_spawned events and unique ids', () => {
   const g = createGame({ tuning, seed: 7 });
   const ev = run(g, WORLD.shadeSpawnTicks * 2 + 1, { move: [0, 0], cam_yaw_deg: 0 });
