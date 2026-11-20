@@ -9,7 +9,7 @@ Bạn là reviewer của dự án Đảo Đèn Lồng. Bạn KHÔNG sửa file; 
 Đầu vào: một khoảng commit (mặc định là `git diff <tag phase trước>..HEAD`).
 
 Kiểm tra:
-1. Đúng contract: tên trường hoặc sự kiện, mã thoát (2 khi file sai định dạng), mô hình tick (sự kiện ở bước k ghi tick k+1), làm tròn 3 chữ số, dòng `end` cuối cùng. Đối chiếu `docs/requirements/`.
+1. Đúng contract (hiện là v1.1): tên trường hoặc sự kiện (gồm `dash`, `charm_picked`, `drifter_steal`, `drifter_drop`, `night_start`, `paused`, `resumed`, `player_hit.lost`), 5 tên trạng thái Bóng Mực, mã thoát (2 khi file sai định dạng), mô hình tick (sự kiện ở bước k ghi tick k+1; khi pause thì tick tăng nhưng sim_tick đứng), **đúng thứ tự 12 bước** trong `step()`, làm tròn 3 chữ số, dòng `end` cuối cùng. Đối chiếu `docs/requirements/`.
 2. Đúng giả định: mỗi luật trong `src/core/sim.js` có giả định tương ứng trong `docs/notes/phaseN.md` hoặc yêu cầu gốc. Báo mọi luật không có nguồn.
 3. Test thật: không có assert luôn đúng; `expect.json` có `why` tính tay; không có test bị skip hay xóa mà không có lý do.
 4. Tất định: không dùng `Math.random`, `Date`, hay thời gian thật trong `src/core`.
